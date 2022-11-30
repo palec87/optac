@@ -27,6 +27,7 @@ from time import gmtime, strftime
 import cv2
 import json
 import numpy as np
+import time
 
 from PyQt5 import QtCore, QtWidgets
 from gui.optac_ui import Ui_MainWindow
@@ -41,7 +42,7 @@ from exceptions import NoMotorInitialized
 
 # config #
 #########
-pg.setConfigOption('background', 'w')
+pg.setConfigOption('background', 'd')
 pg.setConfigOption('foreground', 'k')
 
 
@@ -101,6 +102,12 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.exit_btn.clicked.connect(self.exec_exit_btn)
         self.ui.folder_btn.clicked.connect(self.select_folder)
 
+        # plot control
+        self.ui.toggle_hist.toggled.connect(self.update_toggle_hist)
+        self.ui.min_hist.valueChanged.connect(self.update_hist_min)
+        self.ui.max_hist.valueChanged.connect(self.update_hist_max)
+
+        self.stop_request = False
         self.idle = True
         self.motor_on = False
         self.camera_on = False
@@ -112,10 +119,12 @@ class Gui(QtWidgets.QMainWindow):
         self.frame_count = 0
         self.no_data_count = 0
         self.metadata = {}
+        self.toggle_hist = False
         self.main_folder = os.getcwd()
         self.frame_count_set(self.frame_count)
         self.no_data_count_set(self.no_data_count)
         self.update_folder_path()
+        self.ui.frame_rate.setDisabled(True)
 
         if preloaded is False:
             self.ui.motor_speed.setValue(500)
@@ -128,10 +137,24 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.amp_ch.setChecked(True)
             self.ui.live_reconstruct.setChecked(False)
             self.ui.recon_px.setValue(0)
+            self.ui.min_hist.setValue(1)
+            self.ui.max_hist.setValue(250)
 
             self.ui.camera_type_list.setCurrentIndex(0)
             self.ui.motor_type_list.setCurrentIndex(0)
             self.ui.rotate_motor_btn.setDisabled(True)
+
+            # self.current_frame = Frame(np.array([0,1]), 0, 0)
+            # self.current_frame.frame = np.zeros((1280,720))
+
+    def update_hist_min(self):
+        self.min_hist = self.ui.min_hist.value()
+
+    def update_hist_max(self):
+        self.max_hist = self.ui.max_hist.value()
+
+    def update_toggle_hist(self):
+        self.toggle_hist = self.ui.toggle_hist.isChecked()
 
     def update_folder_path(self):
         self.ui.folder_path.setText(self.main_folder)
@@ -167,7 +190,7 @@ class Gui(QtWidgets.QMainWindow):
         self.accum_shots = self.ui.accum_shots.isChecked()
         if self.camera_on:
             print('updating accum prop')
-            self.camera.accum = self.ui.accum_shots
+            self.camera.accum = self.ui.accum_shots.isChecked()
 
     def update_motor_steps(self):
         self.motor_steps = self.ui.motor_steps.value()
@@ -294,7 +317,6 @@ class Gui(QtWidgets.QMainWindow):
         '''stops acquisition from running'''
         self.append_history('Stopped')
         self.stop_request = True
-        self.ui.run_btn.setDisabled(False)
         try:
             self.camera.exit()
             self.acquire_thread.quit()
@@ -466,34 +488,26 @@ class Gui(QtWidgets.QMainWindow):
 
     def create_plots(self):
         '''defines defaults for each graph'''
-        self.ui.camera_live.plotItem.setLabels(
+        self.hist = self.ui.camera_live.getHistogramWidget()
+        self.hist.fillHistogram(color=(255, 0, 0))
+
+        self.ui.recon_live.plotItem.setLabels(
             left='pixel Y',
             bottom='pixel X'
         )
 
-        self.ui.recon_live.plotItem.setLabels(
-            left='pixel X',
-            bottom='pixel X'
-        )
-        # self.ui.camera_live.plotItem.showAxis('top', show=True)
-        # self.ui.camera_live.plotItem.showAxis('right', show=True)
-
     def current_frame_plot(self):
         '''last frame plot in Align tab'''
         try:
-            img = pg.ImageItem(image=self.current_frame.frame)
-            self.ui.camera_live.plotItem.addItem(
-                img,
-                clear=True,
-                pen='b'
-            )
-            # bar = pg.ColorBarItem()
-            # bar.setImageItem(
-            #     img,
-            #     insert_in=self.ui.camera_live.plotItem)
+            # this works
+            self.ui.camera_live.setImage(self.current_frame.frame)
+            self.ui.camera_live.ui.splitter.setSizes([1, 1])
+            if self.toggle_hist:
+                self.hist.setLevels(
+                    min=self.min_hist,
+                    max=self.max_hist,
+                )
 
-            # self.ui.camera_live.plotItem.addItem(bar)
-            # self.ui.camera_live.plotItem.addColorBar(img)
         except Exception as e:
             self.append_history(f'Error Plotting Last Frame, {e}')
         return
