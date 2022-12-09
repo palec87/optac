@@ -57,9 +57,9 @@ class Gui(QtWidgets.QMainWindow):
         # and the methods from this class
 
         # motor control values
-        self.ui.motor_speed.valueChanged.connect(self.update_motor_speed)
-        self.ui.angle.valueChanged.connect(self.update_motor_angle)
-        self.ui.motor_steps.valueChanged.connect(self.update_motor_steps)
+        self.ui.motor_speed.valueChanged.connect(self._update_motor_speed)
+        self.ui.angle.valueChanged.connect(self._update_motor_angle)
+        self.ui.motor_steps.valueChanged.connect(self._update_motor_steps)
         # motor buttons
         self.ui.rotate_motor_btn.clicked.connect(self.exec_rotate_motor_btn)
         self.ui.rotate_motor_btn.setDisabled(True)  # not implemented
@@ -69,33 +69,34 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.motor_close_btn.setDisabled(True)
 
         self.ui.motor_type_list.currentIndexChanged.connect(
-            self.update_motor_type
+            self._update_motor_type
             )
         self.ui.motor_type_list.addItem('Uno-stepper')
 
         # camera settings
-        self.ui.frame_rate.valueChanged.connect(self.update_frame_rate)
+        self.ui.frame_rate.valueChanged.connect(self._update_frame_rate)
         self.ui.camera_type_list.currentIndexChanged.connect(
-            self.update_camera_type
+            self._update_camera_type
             )
         self.ui.camera_type_list.addItem('Sky (1280x720)')
+        self.ui.port.valueChanged.connect(self._update_camera_port)
 
-        self.ui.red_ch.toggled.connect(self.update_camera_channels)
-        self.ui.green_ch.toggled.connect(self.update_camera_channels)
-        self.ui.blue_ch.toggled.connect(self.update_camera_channels)
-        self.ui.amp_ch.toggled.connect(self.update_camera_channels)
+        self.ui.red_ch.toggled.connect(self._update_camera_channels)
+        self.ui.green_ch.toggled.connect(self._update_camera_channels)
+        self.ui.blue_ch.toggled.connect(self._update_camera_channels)
+        self.ui.amp_ch.toggled.connect(self._update_camera_channels)
 
         # acquire settings
         self.ui.get_n_frames_btn.clicked.connect(self.exec_get_n_frames_btn)
-        self.ui.n_frames.valueChanged.connect(self.update_n_frames)
-        self.ui.frames2avg.valueChanged.connect(self.update_frames_to_avg)
-        self.ui.accum_shots.toggled.connect(self.update_accum_shots)
+        self.ui.n_frames.valueChanged.connect(self._update_n_frames)
+        self.ui.frames2avg.valueChanged.connect(self._update_frames_to_avg)
+        self.ui.accum_shots.toggled.connect(self._update_accum_shots)
 
         # measure panel
         # self.ui.expr_metadata.textChanged(self.update_metadata_expr)
         self.ui.run_opt_btn.clicked.connect(self.exec_run_opt_btn)
-        self.ui.live_reconstruct.toggled.connect(self.update_live_recon_btn)
-        self.ui.recon_px.valueChanged.connect(self.update_radon_idx)
+        self.ui.live_reconstruct.toggled.connect(self._update_live_recon_btn)
+        self.ui.recon_px.valueChanged.connect(self._update_radon_idx)
 
         # Control panel
         self.ui.stop_btn.clicked.connect(self.exec_stop_btn)
@@ -103,9 +104,9 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.folder_btn.clicked.connect(self.select_folder)
 
         # plot control
-        self.ui.toggle_hist.toggled.connect(self.update_toggle_hist)
-        self.ui.min_hist.valueChanged.connect(self.update_hist_min)
-        self.ui.max_hist.valueChanged.connect(self.update_hist_max)
+        self.ui.toggle_hist.toggled.connect(self._update_toggle_hist)
+        self.ui.min_hist.valueChanged.connect(self._update_hist_min)
+        self.ui.max_hist.valueChanged.connect(self._update_hist_max)
 
         self.stop_request = False
         self.idle = True
@@ -116,6 +117,7 @@ class Gui(QtWidgets.QMainWindow):
         self.live_recon = False
         self.accum_shots = False
         self.channel = 3
+        self.camera_port = 1
         self.frame_count = 0
         self.no_data_count = 0
         self.metadata = {}
@@ -123,7 +125,7 @@ class Gui(QtWidgets.QMainWindow):
         self.main_folder = os.getcwd()
         self.frame_count_set(self.frame_count)
         self.no_data_count_set(self.no_data_count)
-        self.update_folder_path()
+        self._update_folder_path()
         self.ui.frame_rate.setDisabled(True)
 
         if preloaded is False:
@@ -131,6 +133,7 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.angle.setValue(400)
             self.ui.motor_steps.setValue(2)
             self.ui.frame_rate.setValue(24)
+            self.ui.port.setValue(1)
             self.ui.frames2avg.setValue(10)
             self.ui.n_frames.setValue(10)
             self.ui.accum_shots.setChecked(False)
@@ -147,25 +150,48 @@ class Gui(QtWidgets.QMainWindow):
             # self.current_frame = Frame(np.array([0,1]), 0, 0)
             # self.current_frame.frame = np.zeros((1280,720))
 
-    def update_hist_min(self):
+    def _update_camera_port(self):
+        """Updates camera port form UI, TODO Does user need to know?.
+        """
+        self.camera_port = self.ui.port.value()
+
+    def _update_hist_min(self):
+        """Set minimum level for main image histogram from UI
+        """
         self.min_hist = self.ui.min_hist.value()
 
-    def update_hist_max(self):
+    def _update_hist_max(self):
+        """Set maximum level for main image histogram from UI
+        """
         self.max_hist = self.ui.max_hist.value()
 
-    def update_toggle_hist(self):
+    def _update_toggle_hist(self):
+        """Use histogram min/max levels if toggled"""
         self.toggle_hist = self.ui.toggle_hist.isChecked()
 
-    def update_folder_path(self):
+    def _update_folder_path(self):
+        """Update saving folder path from UI"""
         self.ui.folder_path.setText(self.main_folder)
 
-    def update_radon_idx(self):
+    def _update_radon_idx(self):
+        """Which horizontal line of the main graph
+        will be reconstructed, update input from UI.
+        """
         self.radon_idx = self.ui.recon_px.value()
 
-    def update_live_recon_btn(self):
+    def _update_live_recon_btn(self):
+        """If UI button checked, live reconstruction is active
+        during the experiment.
+        """
         self.live_recon = self.ui.live_reconstruct.isChecked()
 
-    def update_camera_channels(self, checked):
+    def _update_camera_channels(self, checked):
+        """Checks which camera channel is selected
+        in the UI.
+
+        Args:
+            checked (bool): ischecked button
+        """
         if checked:
             return
         if self.ui.red_ch.isChecked():
@@ -185,46 +211,66 @@ class Gui(QtWidgets.QMainWindow):
             self.camera.col_ch = self.channel
         return
 
-    def update_accum_shots(self):
-        print(f'camera state, {self.camera_on}')
+    def _update_accum_shots(self):
+        """If checked, shots are getting accumulated and not
+        averaged. Effect is immediate if acquiring.
+        """
         self.accum_shots = self.ui.accum_shots.isChecked()
         if self.camera_on:
-            print('updating accum prop')
+            self.append_history(
+                'Accumulate shots: '
+                + str(self.ui.accum_shots.isChecked()
+                ))
             self.camera.accum = self.ui.accum_shots.isChecked()
 
-    def update_motor_steps(self):
+    def _update_motor_steps(self):
+        """Update number of motor steps per revolution from UI
+        """
         self.motor_steps = self.ui.motor_steps.value()
 
-    def update_n_frames(self):
+    def _update_n_frames(self):
+        """Update from UI how many frames to aquire
+        Does not take into account averaging per frame.
+        """
         self.n_frames = self.ui.n_frames.value()
 
-    def update_camera_type(self):
+    def _update_camera_type(self):
+        """Update camera type from UI
+        """
         self.camera_type = self.ui.camera_type_list.currentIndex()
         if self.camera_type == 0:
             self.resolution = (1280, 720)
 
-    def update_motor_type(self):
+    def _update_motor_type(self):
+        """Update motor type from the UI"""
         self.motor_type = self.ui.motor_type_list.currentIndex()
         if self.motor_type == 0:
             self.motor = 'Uno-stepper'
         else:
             raise ValueError
 
-    def update_frame_rate(self):
+    def _update_frame_rate(self):
+        """Update frame rate from the UI
+        """
         self.frame_rate = self.ui.frame_rate.value()
 
-    def update_frames_to_avg(self):
+    def _update_frames_to_avg(self):
+        """Number of frames to average per single image"""
         self.frames_to_avg = self.ui.frames2avg.value()
 
-    def update_motor_speed(self):
+    def _update_motor_speed(self):
+        """Update motor speed from the UI"""
         self.motor_speed = self.ui.motor_speed.value()
         if self.motor_on:
             self.stepper.speed = self.motor_speed
 
-    def update_motor_angle(self):
+    def _update_motor_angle(self):
+        """Update motor angle to turn in stepping mode
+        For Uno-stepper, 2048 is a full turn"""
         self.angle = self.ui.angle.value()
 
-    def update_metadata_expr(self):
+    def _update_metadata_expr(self):
+        """ update metadate from the UI text box"""
         self.metadata['exp_notes'] = self.ui.expr_metadata.toPlainText()
 
     ###################
@@ -234,9 +280,9 @@ class Gui(QtWidgets.QMainWindow):
         try:
             self.initialize_stepper()
         except NoMotorInitialized:
-            self.append_history('No motor exception raised.')
+            self.append_history('No motor found.')
         except Exception as e:
-            self.append_history(f'Unknown motor problem, {e}.')
+            self.append_history(f'Motor problem, {e}.')
         else:
             self.motor_on = True
             self.ui.motor_init_btn.setDisabled(True)
@@ -253,7 +299,7 @@ class Gui(QtWidgets.QMainWindow):
         if not self.camera_on:
             self.append_history('Initializing camera')
             self.camera = Sky_basic(
-                            channel=1,
+                            channel=self.camera_port,
                             col_ch=self.channel,
                             resolution=self.resolution,
                             bin_factor=1
@@ -553,6 +599,10 @@ class Gui(QtWidgets.QMainWindow):
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
         retval = msg.exec_()
         return retval
+
+
+def test_run_app(qtbot):
+    pass
 
 
 def main():
