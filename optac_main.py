@@ -27,7 +27,6 @@ from time import gmtime, strftime
 import cv2
 import json
 import numpy as np
-import time
 
 from PyQt5 import QtCore, QtWidgets
 from gui.optac_ui import Ui_MainWindow
@@ -47,11 +46,13 @@ pg.setConfigOption('foreground', 'k')
 
 
 class Gui(QtWidgets.QMainWindow):
-    def __init__(self, preloaded=False):
+    def __init__(self, init_values_file):
         super(Gui, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.show()
+
+        self.init_file = init_values_file
 
         # link GUI objects in optac_ui.py
         # and the methods from this class
@@ -78,6 +79,7 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.camera_type_list.currentIndexChanged.connect(
             self._update_camera_type
             )
+        self.ui.camera_type_list.addItem('virtual')
         self.ui.camera_type_list.addItem('Sky (1280x720)')
         self.ui.port.valueChanged.connect(self._update_camera_port)
 
@@ -110,14 +112,18 @@ class Gui(QtWidgets.QMainWindow):
 
         self.stop_request = False
         self.idle = True
+        self.simul_mode = False
         self.motor_on = False
         self.camera_on = False
         self.opt_running = False
         self.save_images = False
         self.live_recon = False
         self.accum_shots = False
+        self.min_hist = None
+        self.max_hist = None
+        self.motor_steps = None
         self.channel = 3
-        self.camera_port = 1
+        self.camera_port = None
         self.frame_count = 0
         self.no_data_count = 0
         self.metadata = {}
@@ -125,30 +131,70 @@ class Gui(QtWidgets.QMainWindow):
         self.main_folder = os.getcwd()
         self.frame_count_set(self.frame_count)
         self.no_data_count_set(self.no_data_count)
+        self.ui.amp_ch.setChecked(True)
         self._update_folder_path()
         self.ui.frame_rate.setDisabled(True)
+        self.ui.rotate_motor_btn.setDisabled(True)
 
-        if preloaded is False:
-            self.ui.motor_speed.setValue(500)
-            self.ui.angle.setValue(400)
-            self.ui.motor_steps.setValue(2)
-            self.ui.frame_rate.setValue(24)
-            self.ui.port.setValue(1)
-            self.ui.frames2avg.setValue(10)
-            self.ui.n_frames.setValue(10)
-            self.ui.accum_shots.setChecked(False)
-            self.ui.amp_ch.setChecked(True)
-            self.ui.live_reconstruct.setChecked(False)
-            self.ui.recon_px.setValue(0)
-            self.ui.min_hist.setValue(1)
-            self.ui.max_hist.setValue(250)
+        #  try loading last instance values
+        try:
+            f = open(init_values_file, 'r')
+            init_values = json.loads(f.read())
+            self._load_gui_values(init_values)
+        except FileNotFoundError:
+            self._no_init_values()
 
-            self.ui.camera_type_list.setCurrentIndex(0)
-            self.ui.motor_type_list.setCurrentIndex(0)
-            self.ui.rotate_motor_btn.setDisabled(True)
+    def _load_gui_values(self, d):
+        print('reading values')
+        self.ui.motor_speed.setValue(d['motor_speed'])
+        self.ui.angle.setValue(d['angle'])
+        self.ui.motor_steps.setValue(d['motor_steps'])
+        self.ui.frame_rate.setValue(d['frame_rate'])
+        self.ui.port.setValue(d['camera_port'])
+        self.ui.frames2avg.setValue(d['frames_to_avg'])
+        self.ui.n_frames.setValue(d['n_frames'])
+        self.ui.accum_shots.setChecked(d['accum_shots'])
+        self.ui.live_reconstruct.setChecked(d['live_recon'])
+        self.ui.recon_px.setValue(d['recon_px'])
+        self.ui.min_hist.setValue(d['min_hist'])
+        self.ui.max_hist.setValue(d['max_hist'])
+        self.ui.camera_type_list.setCurrentIndex(d['camera_type_idx'])
+        self.ui.motor_type_list.setCurrentIndex(d['motor_type_idx'])
 
-            # self.current_frame = Frame(np.array([0,1]), 0, 0)
-            # self.current_frame.frame = np.zeros((1280,720))
+    def _save_gui_values(self):
+        vals = {}
+        vals['motor_speed'] = self.motor_speed
+        vals['angle'] = self.angle
+        vals['motor_steps'] = self.motor_steps
+        vals['frame_rate'] = self.frame_rate
+        vals['camera_port'] = self.camera_port
+        vals['frames_to_avg'] = self.frames_to_avg
+        vals['n_frames'] = self.n_frames
+        vals['accum_shots'] = self.accum_shots
+        vals['live_recon'] = self.live_recon
+        vals['recon_px'] = self.radon_idx
+        vals['min_hist'] = self.min_hist
+        vals['max_hist'] = self.max_hist
+        vals['camera_type_idx'] = self.camera_type
+        vals['motor_type_idx'] = self.motor_type
+        with open(self.init_file, 'w') as f:
+            f.write(json.dumps(vals))
+
+    def _no_init_values(self):
+        self.ui.motor_speed.setValue(500)
+        self.ui.angle.setValue(400)
+        self.ui.motor_steps.setValue(4)
+        self.ui.frame_rate.setValue(24)
+        self.ui.port.setValue(1)
+        self.ui.frames2avg.setValue(10)
+        self.ui.n_frames.setValue(10)
+        self.ui.accum_shots.setChecked(False)
+        self.ui.live_reconstruct.setChecked(False)
+        self.ui.recon_px.setValue(10)
+        self.ui.min_hist.setValue(1)
+        self.ui.max_hist.setValue(250)
+        self.ui.camera_type_list.setCurrentIndex(0)
+        self.ui.motor_type_list.setCurrentIndex(0)
 
     def _update_camera_port(self):
         """Updates camera port form UI, TODO Does user need to know?.
@@ -159,11 +205,21 @@ class Gui(QtWidgets.QMainWindow):
         """Set minimum level for main image histogram from UI
         """
         self.min_hist = self.ui.min_hist.value()
+        self._check_hist_vals()
 
     def _update_hist_max(self):
         """Set maximum level for main image histogram from UI
         """
         self.max_hist = self.ui.max_hist.value()
+        self._check_hist_vals()
+
+    def _check_hist_vals(self):
+        '''check if min hist is lower than hist max'''
+        if self.max_hist is None or self.min_hist is None:
+            return
+        if self.ui.max_hist.value() <= self.ui.min_hist.value():
+            self.message_hist_error()
+            self.ui.max_hist.setValue(self.min_hist+1)
 
     def _update_toggle_hist(self):
         """Use histogram min/max levels if toggled"""
@@ -219,8 +275,8 @@ class Gui(QtWidgets.QMainWindow):
         if self.camera_on:
             self.append_history(
                 'Accumulate shots: '
-                + str(self.ui.accum_shots.isChecked()
-                ))
+                + str(self.ui.accum_shots.isChecked())
+                )
             self.camera.accum = self.ui.accum_shots.isChecked()
 
     def _update_motor_steps(self):
@@ -288,22 +344,38 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.motor_init_btn.setDisabled(True)
             self.ui.motor_close_btn.setDisabled(False)
 
-    def exec_get_n_frames_btn(self):
-        self.append_history(
-            f'Acq. {self.n_frames} frames, avg={self.frames_to_avg}'
-                            )
-        self.frame_count_set(0)
-        self.no_data_count_set(0)
+    def initialize_camera(self):
+        self.append_history('Initializing camera')
+        if self.camera_type == 0:
+            # virtual
+            self.initialize_virtual_camera()
+        elif self.camera_type == 1:
+            # Sky_basic
+            self.initialize_sky_basic()
 
-        # camera init
-        if not self.camera_on:
-            self.append_history('Initializing camera')
-            self.camera = Sky_basic(
+    def initialize_sky_basic(self):
+        self.camera = Sky_basic(
                             channel=self.camera_port,
                             col_ch=self.channel,
                             resolution=self.resolution,
                             bin_factor=1
                             )
+
+    def initialize_virtual_camera(self):
+        self.simul_mode = True
+        self.current_frame = Frame()
+
+    def exec_get_n_frames_btn(self):
+        self.append_history(
+            f'Acq. {self.n_frames} frames, avg={self.frames_to_avg}'
+        )
+        self.frame_count_set(0)
+        self.no_data_count_set(0)
+
+        # camera init
+        if not self.camera_on:
+            self.initialize_camera()
+
             self.camera_on = True
             self.acquire_thread = QtCore.QThread(parent=self)
             self.acquire_thread.start()
@@ -322,7 +394,7 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.angle.setValue(
             int(self.stepper.full_rotation / self.motor_steps)
             )
-        self.update_motor_angle()
+        self._update_motor_angle()
         self.append_history(f'ANGLE: {self.angle}')
         self.unit_of_progress = 100/self.motor_steps
         self.step_counter = 0
@@ -354,10 +426,15 @@ class Gui(QtWidgets.QMainWindow):
         pass
 
     def select_folder(self):
-        self.main_folder = str(QtWidgets.QFileDialog.getExistingDirectory(
+        folder = str(QtWidgets.QFileDialog.getExistingDirectory(
                                 self, "Select Directory"))
+        if not folder:
+            self.append_history('no change in data folder')
+            return
+
+        self.main_folder = folder
+        self._update_folder_path()
         self.append_history('new data folder selected')
-        self.update_folder_path()
 
     def exec_stop_btn(self):
         '''stops acquisition from running'''
@@ -378,8 +455,11 @@ class Gui(QtWidgets.QMainWindow):
          in case exit is called before stop
          '''
         self.append_history('Stopped')
+
         if self.idle is False:
             self.finish()
+
+        self._save_gui_values()
         self.close()
 
     #################
@@ -598,16 +678,23 @@ class Gui(QtWidgets.QMainWindow):
         msg.setText("Initialize motor first")
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
         retval = msg.exec_()
+        print(retval)
         return retval
 
-
-def test_run_app(qtbot):
-    pass
+    def message_hist_error(self):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setText("'Min hist' value has to be lower than 'Max hist'")
+        msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        retval = msg.exec_()
+        print(retval)
+        return retval
 
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
-    gui = Gui()
+    init_values_file = os.path.join(os.getcwd(), 'data\\lif.json')
+    gui = Gui(init_values_file=init_values_file)
     gui.show()
     gui.create_plots()
     sys.exit(app.exec_())
