@@ -16,9 +16,6 @@ TODO Save images into a check radio button
 
 Small motor which comes with Arduino starting kit (28BYJ-48) is
 denoted as Uno-stepper
-
-Hardcoded path to the data saving folder
-C:\\Users\\David Palecek\\Documents\\UAlg\\my_opt
 '''
 
 import sys
@@ -516,7 +513,7 @@ class Gui(QtWidgets.QMainWindow):
         self.metadata['images_per_step'] = self.n_frames
 
     def save_metadata(self):
-        file_path = os.path.join(self.exp_path+'\\metadata.txt')
+        file_path = os.path.join(self.exp_path+'metadata.txt')
         with open(file_path, 'w') as f:
             f.write(json.dumps(self.metadata))
 
@@ -528,10 +525,10 @@ class Gui(QtWidgets.QMainWindow):
         # time_stamp = self.get_time_now()
         fname = '_'.join([str(self.step_counter), str(self.frame_count)])
         if self.accum_shots:
-            file_path = os.path.join(self.exp_path+'\\'+fname+'.txt')
+            file_path = os.path.join(self.exp_path, fname+'.txt')
             np.savetxt(file_path, self.current_frame.frame)
         else:
-            file_path = os.path.join(self.exp_path+'\\'+fname+'.jpg')
+            file_path = os.path.join(self.exp_path, fname+'.jpg')
             cv2.imwrite(file_path, self.current_frame.frame)
 
     ###############
