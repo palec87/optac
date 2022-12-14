@@ -23,7 +23,7 @@ def test_raises():
 
 @pytest.fixture
 def app(qtbot):
-    test_app = Gui()
+    test_app = Gui('lif.json')
     qtbot.addWidget(test_app)
     return test_app
 
@@ -97,7 +97,7 @@ def test_hist(qtbot, app, val_min, val_max, diag, expected):
     def handle_dialog():
         mbox = QtWidgets.QApplication.activeWindow()
         ok_but = mbox.button(QtWidgets.QMessageBox.Ok)
-        qtbot.mouseClick(ok_but, QtCore.Qt.LeftButton, delay=2)
+        qtbot.mouseClick(ok_but, QtCore.Qt.LeftButton, delay=20)
 
     app.ui.min_hist.setValue(val_min)
     if diag:

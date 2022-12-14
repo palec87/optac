@@ -39,6 +39,10 @@ from radon_back_projection import Radon
 
 from exceptions import NoMotorInitialized
 
+__author__ = 'David Palecek'
+__credits__ = ['Teresa M Correia', 'Rui Guerra']
+__license__ = 'GPL'
+
 # config #
 #########
 pg.setConfigOption('background', 'd')
@@ -693,7 +697,7 @@ class Gui(QtWidgets.QMainWindow):
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
-    init_values_file = os.path.join(os.getcwd(), 'data\\lif.json')
+    init_values_file = os.path.join(os.getcwd(), 'lif.json')
     gui = Gui(init_values_file=init_values_file)
     gui.show()
     gui.create_plots()
