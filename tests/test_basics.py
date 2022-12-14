@@ -21,22 +21,22 @@ def test_raises():
         divide(3, 0)
 
 
-# @pytest.fixture
-# def app(qtbot):
-#     test_app = Gui('lif.json')
-#     qtbot.addWidget(test_app)
-#     return test_app
+@pytest.fixture
+def app(qtbot):
+    test_app = Gui('lif.json')
+    qtbot.addWidget(test_app)
+    return test_app
 
 
-# def test_init(app):
-#     assert not app.stop_request
-#     assert app.idle
-#     assert not app.motor_on
-#     assert not app.camera_on
-#     assert not app.opt_running
-#     assert not app.save_images
-#     assert not app.live_recon
-#     assert not app.accum_shots
+def test_init(app):
+    assert not app.stop_request
+    assert app.idle
+    assert not app.motor_on
+    assert not app.camera_on
+    assert not app.opt_running
+    assert not app.save_images
+    assert not app.live_recon
+    assert not app.accum_shots
 
 
 # @pytest.mark.parametrize(
