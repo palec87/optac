@@ -30,7 +30,7 @@ from gui.optac_ui import Ui_MainWindow
 import pyqtgraph as pg
 
 from motor_class import Stepper
-from camera_class import Sky_basic
+from camera_class import Sky_basic, Virtual
 from frame_processing import Frame
 from radon_back_projection import Radon
 
@@ -54,6 +54,26 @@ class Gui(QtWidgets.QMainWindow):
         self.show()
 
         self.init_file = init_values_file
+        self.stop_request = False
+        self.idle = True
+        self.simul_mode = False
+        self.motor_on = False
+        self.camera_on = False
+        self.opt_running = False
+        self.save_images = False
+        self.live_recon = False
+        self.accum_shots = False
+        self.min_hist = None
+        self.max_hist = None
+        self.motor_steps = None
+        self.channel = 3
+        self.camera_port = None
+        self.simul_angles = 32  # Number of rotation angles for Virtual camera
+        self.frame_count = 0
+        self.no_data_count = 0
+        self.metadata = {}
+        self.toggle_hist = False
+        self.main_folder = os.getcwd()
 
         # link GUI objects in optac_ui.py
         # and the methods from this class
@@ -111,25 +131,6 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.min_hist.valueChanged.connect(self._update_hist_min)
         self.ui.max_hist.valueChanged.connect(self._update_hist_max)
 
-        self.stop_request = False
-        self.idle = True
-        self.simul_mode = False
-        self.motor_on = False
-        self.camera_on = False
-        self.opt_running = False
-        self.save_images = False
-        self.live_recon = False
-        self.accum_shots = False
-        self.min_hist = None
-        self.max_hist = None
-        self.motor_steps = None
-        self.channel = 3
-        self.camera_port = None
-        self.frame_count = 0
-        self.no_data_count = 0
-        self.metadata = {}
-        self.toggle_hist = False
-        self.main_folder = os.getcwd()
         self.frame_count_set(self.frame_count)
         self.no_data_count_set(self.no_data_count)
         self.ui.amp_ch.setChecked(True)
@@ -295,8 +296,7 @@ class Gui(QtWidgets.QMainWindow):
         """Update camera type from UI
         """
         self.camera_type = self.ui.camera_type_list.currentIndex()
-        if self.camera_type == 0:
-            self.resolution = (1280, 720)
+        self.initialize_camera()
 
     def _update_motor_type(self):
         """Update motor type from the UI"""
@@ -347,12 +347,26 @@ class Gui(QtWidgets.QMainWindow):
 
     def initialize_camera(self):
         self.append_history('Initializing camera')
+        if self.camera_on:
+            self.acquire_thread.quit()
+
         if self.camera_type == 0:
             # virtual
             self.initialize_virtual_camera()
+            self.ui.motor_steps.setValue(self.simul_angles)
+            self.ui.motor_steps.setDisabled(True)
         elif self.camera_type == 1:
             # Sky_basic
+            self.resolution = (1280, 720)
             self.initialize_sky_basic()
+            self.ui.motor_steps.setEnabled(True)
+
+        self.camera_on = True
+        self.acquire_thread = QtCore.QThread(parent=self)
+        self.acquire_thread.start()
+        self.camera.moveToThread(self.acquire_thread)
+        self.camera.start_acquire.connect(self.camera.acquire)
+        self.camera.data_ready.connect(self.post_acquire)
 
     def initialize_sky_basic(self):
         self.camera = Sky_basic(
@@ -364,7 +378,7 @@ class Gui(QtWidgets.QMainWindow):
 
     def initialize_virtual_camera(self):
         self.simul_mode = True
-        self.current_frame = Frame()
+        self.camera = Virtual(self.simul_angles)
 
     def exec_get_n_frames_btn(self):
         self.append_history(
@@ -377,12 +391,6 @@ class Gui(QtWidgets.QMainWindow):
         if not self.camera_on:
             self.initialize_camera()
 
-            self.camera_on = True
-            self.acquire_thread = QtCore.QThread(parent=self)
-            self.acquire_thread.start()
-            self.camera.moveToThread(self.acquire_thread)
-            self.camera.start_acquire.connect(self.camera.acquire)
-            self.camera.data_ready.connect(self.post_acquire)
         self.acquire()
 
     def exec_run_opt_btn(self):
@@ -522,7 +530,6 @@ class Gui(QtWidgets.QMainWindow):
         self.exec_get_n_frames_btn()
 
     def save_image(self):
-        # time_stamp = self.get_time_now()
         fname = '_'.join([str(self.step_counter), str(self.frame_count)])
         if self.accum_shots:
             file_path = os.path.join(self.exp_path, fname+'.txt')
@@ -537,6 +544,7 @@ class Gui(QtWidgets.QMainWindow):
     def acquire(self):
         '''acquire data from camera'''
         self.camera.average = self.frames_to_avg
+        self.camera.idx = self.frame_count  # only needed for the virtual
         self.camera.start_acquire.emit()
 
     def post_acquire(self, frame, no_frame_count, minmax):
@@ -552,7 +560,6 @@ class Gui(QtWidgets.QMainWindow):
 
         if self.save_images:
             self.save_image()
-
         self.frame_count_set(self.frame_count+1)
 
         if self.frame_count >= self.n_frames:
@@ -657,6 +664,8 @@ class Gui(QtWidgets.QMainWindow):
     ###################
     def idling(self):
         self.idle = True
+        # self.acquire_thread.terminate()
+        # self.acquire_thread.quit()
 
     def finish(self):
         self.idling()

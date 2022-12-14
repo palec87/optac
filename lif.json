@@ -1,1 +1,1 @@
-{"motor_speed": 500, "angle": 400, "motor_steps": 6, "frame_rate": 24, "camera_port": 1, "frames_to_avg": 10, "n_frames": 10, "accum_shots": false, "live_recon": false, "recon_px": 10, "min_hist": 1, "max_hist": 250, "camera_type_idx": 0, "motor_type_idx": 0}
+{"motor_speed": 500, "angle": 400, "motor_steps": 32, "frame_rate": 24, "camera_port": 1, "frames_to_avg": 10, "n_frames": 5, "accum_shots": false, "live_recon": false, "recon_px": 10, "min_hist": 1, "max_hist": 250, "camera_type_idx": 1, "motor_type_idx": 0}
