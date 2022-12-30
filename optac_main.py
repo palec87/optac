@@ -1,5 +1,6 @@
+#!/usr/bin/env python
+
 '''
-author: David Palecek
 OPTac gui
 
 Acquisition software for Optical Projection Tomography. If you are
@@ -61,19 +62,17 @@ class Gui(QtWidgets.QMainWindow):
         self.camera_on = False
         self.opt_running = False
         self.save_images = False
-        self.live_recon = False
-        self.accum_shots = False
         self.min_hist = None
         self.max_hist = None
         self.motor_steps = None
         self.channel = 3
         self.camera_port = None
-        self.simul_angles = 32  # Number of rotation angles for Virtual camera
+        self.simul_angles = 128  # Number of rotation angles for Virtual camera
         self.frame_count = 0
         self.no_data_count = 0
         self.metadata = {}
         self.toggle_hist = False
-        self.main_folder = os.getcwd()
+        self.exp_path = None
 
         # link GUI objects in optac_ui.py
         # and the methods from this class
@@ -102,7 +101,8 @@ class Gui(QtWidgets.QMainWindow):
             )
         self.ui.camera_type_list.addItem('virtual')
         self.ui.camera_type_list.addItem('Sky (1280x720)')
-        self.ui.port.valueChanged.connect(self._update_camera_port)
+        self.ui.camera_port.valueChanged.connect(self._update_camera_port)
+        self.ui.flat_field_btn.clicked.connect(self.exec_flat_field_btn)
 
         self.ui.red_ch.toggled.connect(self._update_camera_channels)
         self.ui.green_ch.toggled.connect(self._update_camera_channels)
@@ -118,8 +118,8 @@ class Gui(QtWidgets.QMainWindow):
         # measure panel
         # self.ui.expr_metadata.textChanged(self.update_metadata_expr)
         self.ui.run_opt_btn.clicked.connect(self.exec_run_opt_btn)
-        self.ui.live_reconstruct.toggled.connect(self._update_live_recon_btn)
-        self.ui.recon_px.valueChanged.connect(self._update_radon_idx)
+        self.ui.live_recon.toggled.connect(self._update_live_recon_btn)
+        self.ui.radon_idx.valueChanged.connect(self._update_radon_idx)
 
         # Control panel
         self.ui.stop_btn.clicked.connect(self.exec_stop_btn)
@@ -134,7 +134,7 @@ class Gui(QtWidgets.QMainWindow):
         self.frame_count_set(self.frame_count)
         self.no_data_count_set(self.no_data_count)
         self.ui.amp_ch.setChecked(True)
-        self._update_folder_path()
+
         self.ui.frame_rate.setDisabled(True)
         self.ui.rotate_motor_btn.setDisabled(True)
 
@@ -146,22 +146,43 @@ class Gui(QtWidgets.QMainWindow):
         except FileNotFoundError:
             self._no_init_values()
 
+        self._recheck_values()
+
+    def _recheck_values(self):
+        self.motor_speed = self.ui.motor_speed.value()
+        self.angle = self.ui.angle.value()
+        self.motor_steps = self.ui.motor_steps.value()
+        self.frame_rate = self.ui.frame_rate.value()
+        self.camera_port = self.ui.camera_port.value()
+        self.frames_to_avg = self.ui.frames2avg.value()
+        self.n_frames = self.ui.n_frames.value()
+        self.accum_shots = self.ui.accum_shots.isChecked()
+        self.live_recon = self.ui.live_recon.isChecked()
+        self.radon_idx = self.ui.radon_idx.value()
+        self.min_hist = self.ui.min_hist.value()
+        self.max_hist = self.ui.max_hist.value()
+        self.camera_type = self.ui.camera_type_list.currentIndex()
+        self.motor_type = self.ui.motor_type_list.currentIndex()
+        self.main_folder = self.ui.folder_path.toPlainText()
+
     def _load_gui_values(self, d):
         print('reading values')
         self.ui.motor_speed.setValue(d['motor_speed'])
         self.ui.angle.setValue(d['angle'])
         self.ui.motor_steps.setValue(d['motor_steps'])
         self.ui.frame_rate.setValue(d['frame_rate'])
-        self.ui.port.setValue(d['camera_port'])
+        self.ui.camera_port.setValue(d['camera_port'])
         self.ui.frames2avg.setValue(d['frames_to_avg'])
         self.ui.n_frames.setValue(d['n_frames'])
         self.ui.accum_shots.setChecked(d['accum_shots'])
-        self.ui.live_reconstruct.setChecked(d['live_recon'])
-        self.ui.recon_px.setValue(d['recon_px'])
+        self.ui.live_recon.setChecked(d['live_recon'])
+        self.ui.radon_idx.setValue(d['radon_idx'])
         self.ui.min_hist.setValue(d['min_hist'])
         self.ui.max_hist.setValue(d['max_hist'])
         self.ui.camera_type_list.setCurrentIndex(d['camera_type_idx'])
         self.ui.motor_type_list.setCurrentIndex(d['motor_type_idx'])
+        self.main_folder = d['folder_path']
+        self._update_folder_path()
 
     def _save_gui_values(self):
         vals = {}
@@ -174,11 +195,12 @@ class Gui(QtWidgets.QMainWindow):
         vals['n_frames'] = self.n_frames
         vals['accum_shots'] = self.accum_shots
         vals['live_recon'] = self.live_recon
-        vals['recon_px'] = self.radon_idx
+        vals['radon_idx'] = self.radon_idx
         vals['min_hist'] = self.min_hist
         vals['max_hist'] = self.max_hist
         vals['camera_type_idx'] = self.camera_type
         vals['motor_type_idx'] = self.motor_type
+        vals['folder_path'] = self.main_folder
         with open(self.init_file, 'w') as f:
             f.write(json.dumps(vals))
 
@@ -187,21 +209,23 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.angle.setValue(400)
         self.ui.motor_steps.setValue(4)
         self.ui.frame_rate.setValue(24)
-        self.ui.port.setValue(1)
+        self.ui.camera_port.setValue(1)
         self.ui.frames2avg.setValue(10)
         self.ui.n_frames.setValue(10)
         self.ui.accum_shots.setChecked(False)
-        self.ui.live_reconstruct.setChecked(False)
-        self.ui.recon_px.setValue(10)
+        self.ui.live_recon.setChecked(False)
+        self.ui.radon_idx.setValue(10)
         self.ui.min_hist.setValue(1)
         self.ui.max_hist.setValue(250)
         self.ui.camera_type_list.setCurrentIndex(0)
         self.ui.motor_type_list.setCurrentIndex(0)
+        self.main_folder = os.getcwd()
+        self._update_folder_path()
 
     def _update_camera_port(self):
         """Updates camera port form UI, TODO Does user need to know?.
         """
-        self.camera_port = self.ui.port.value()
+        self.camera_port = self.ui.camera_port.value()
 
     def _update_hist_min(self):
         """Set minimum level for main image histogram from UI
@@ -229,19 +253,20 @@ class Gui(QtWidgets.QMainWindow):
 
     def _update_folder_path(self):
         """Update saving folder path from UI"""
+        print('ahoj', self.main_folder)
         self.ui.folder_path.setText(self.main_folder)
 
     def _update_radon_idx(self):
         """Which horizontal line of the main graph
         will be reconstructed, update input from UI.
         """
-        self.radon_idx = self.ui.recon_px.value()
+        self.radon_idx = self.ui.radon_idx.value()
 
     def _update_live_recon_btn(self):
         """If UI button checked, live reconstruction is active
         during the experiment.
         """
-        self.live_recon = self.ui.live_reconstruct.isChecked()
+        self.live_recon = self.ui.live_recon.isChecked()
 
     def _update_camera_channels(self, checked):
         """Checks which camera channel is selected
@@ -295,6 +320,7 @@ class Gui(QtWidgets.QMainWindow):
     def _update_camera_type(self):
         """Update camera type from UI
         """
+        print('initializing')
         self.camera_type = self.ui.camera_type_list.currentIndex()
         self.initialize_camera()
 
@@ -333,6 +359,36 @@ class Gui(QtWidgets.QMainWindow):
     ###################
     # execute buttons #
     ###################
+    def exec_flat_field_btn(self):
+        """integrate dark counts for 50x exposure time
+        - flat field is rounded to int, for saving
+        """
+        # pop message to block the camera
+        self.message_block()
+
+        # camera init
+        if not self.camera_on:
+            self.initialize_camera()
+
+        # acquire dataset
+        self.acquire_flat_field()
+        self.flat_field = self.current_frame.frame
+        self.save_image('flat_field')
+
+    def acquire_flat_field(self):
+        self.camera.average = self.frames_to_avg * 50
+        # mes = self.message_flat_field_acq()
+        self.camera.start_acquire.emit()
+        # mes.close()
+
+        self.append_history('')
+
+    def linearity_calibration(self):
+        """load calibration file, doing it alone is tedious,
+        can be suggested to user
+        """
+        return
+
     def exec_motor_init_btn(self):
         try:
             self.initialize_stepper()
@@ -393,20 +449,27 @@ class Gui(QtWidgets.QMainWindow):
 
         self.acquire()
 
+    def _check_motors(self):
+        self.unit_of_progress = 100/self.motor_steps
+        self.step_counter = 0
+
+        if self.simul_mode:
+            return
+
+        if not self.motor_on:
+            self.initialize_stepper()
+            self.ui.angle.setValue(
+                int(self.stepper.full_rotation / self.motor_steps)
+            )
+            self.append_history(f'ANGLE: {self.angle}')
+
     def exec_run_opt_btn(self):
         self.create_saving_folder()
         self.disable_btns()
         self.save_images = True
         self.opt_running = True
-        if not self.motor_on:
-            self.initialize_stepper()
-        self.ui.angle.setValue(
-            int(self.stepper.full_rotation / self.motor_steps)
-            )
-        self._update_motor_angle()
-        self.append_history(f'ANGLE: {self.angle}')
-        self.unit_of_progress = 100/self.motor_steps
-        self.step_counter = 0
+
+        self._check_motors()
 
         self.collect_metadata()
         self.metadata['exp_start'] = self.get_time_now()
@@ -423,6 +486,8 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.motor_close_btn.setDisabled(True)
 
     def exec_step_motor_btn(self):
+        if self.simul_mode:
+            return
         self.append_history(f'motor speed: {self.stepper.speed}')
         self.stepper.move_relative(self.angle)
 
@@ -513,6 +578,8 @@ class Gui(QtWidgets.QMainWindow):
         self.metadata['exp_end'] = self.get_time_now()
         self.save_metadata()
         self.enable_btns()
+        self.save_images = False
+        self.opt_running = False
         self.idling()
 
     def collect_metadata(self):
@@ -521,7 +588,7 @@ class Gui(QtWidgets.QMainWindow):
         self.metadata['images_per_step'] = self.n_frames
 
     def save_metadata(self):
-        file_path = os.path.join(self.exp_path+'metadata.txt')
+        file_path = os.path.join(self.exp_path, 'metadata.txt')
         with open(file_path, 'w') as f:
             f.write(json.dumps(self.metadata))
 
@@ -529,8 +596,13 @@ class Gui(QtWidgets.QMainWindow):
         self.append_history(f'STEP {self.step_counter}')
         self.exec_get_n_frames_btn()
 
-    def save_image(self):
-        fname = '_'.join([str(self.step_counter), str(self.frame_count)])
+    def save_image(self, fname=None):
+        if not fname:
+            fname = '_'.join([str(self.step_counter), 
+                              str(self.frame_count)])
+        if not self.exp_path:
+            self.create_saving_folder()
+
         if self.accum_shots:
             file_path = os.path.join(self.exp_path, fname+'.txt')
             np.savetxt(file_path, self.current_frame.frame)
@@ -544,7 +616,11 @@ class Gui(QtWidgets.QMainWindow):
     def acquire(self):
         '''acquire data from camera'''
         self.camera.average = self.frames_to_avg
-        self.camera.idx = self.frame_count  # only needed for the virtual
+        # only needed for the virtual camera
+        if self.opt_running:
+            self.camera.idx = self.step_counter
+        else:
+            self.camera.idx = self.frame_count
         self.camera.start_acquire.emit()
 
     def post_acquire(self, frame, no_frame_count, minmax):
@@ -610,15 +686,15 @@ class Gui(QtWidgets.QMainWindow):
     # Plotting #
     ############
     def update_recon(self):
-        try:
-            self.current_recon.update_recon(
-                self.current_frame.frame[:, self.radon_idx],
-                self.step_counter)
-        except AttributeError:
-            print('current_recon does not exist, creating a new one.')
+        if not self.step_counter:
+            print('Creating a new reconstruction object.')
             self.current_recon = Radon(
-                self.current_frame.frame[:, self.radon_idx],
+                self.current_frame.frame[self.radon_idx, :],
                 self.motor_steps)
+        else:
+            self.current_recon.update_recon(
+                self.current_frame.frame[self.radon_idx, :],
+                self.step_counter)
 
     def create_plots(self):
         '''defines defaults for each graph'''
@@ -634,7 +710,7 @@ class Gui(QtWidgets.QMainWindow):
         '''last frame plot in Align tab'''
         try:
             # this works
-            self.ui.camera_live.setImage(self.current_frame.frame)
+            self.ui.camera_live.setImage(np.rot90(self.current_frame.frame))
             self.ui.camera_live.ui.splitter.setSizes([1, 1])
             if self.toggle_hist:
                 self.hist.setLevels(
@@ -699,6 +775,37 @@ class Gui(QtWidgets.QMainWindow):
         retval = msg.exec_()
         print(retval)
         return retval
+
+    def message_block(self):
+        """before acquisition of the flat-field correction
+
+        Returns:
+            bool:
+        """
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setText("Block Camera")
+        msg.setInformativeText("Just press once (be patient)")
+        msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        retval = msg.exec_()
+        return retval
+
+    def message_unblock(self):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setText("UnBlock Camera")
+        msg.setInformativeText("Just press once.")
+        msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        retval = msg.exec_()
+        return retval
+    
+    def message_flat_field_acq(self):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setText("Acquiring Flat-Field")
+        retval = msg.exec_()
+        return msg
+
 
 
 def main():

@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 # owner's
+lif.json
+travis.yml
+.circleci/

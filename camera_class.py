@@ -1,10 +1,19 @@
+#!/usr/bin/env python
+"""
+Classes for various types of acquisition cameras.
+1. Sky Basic
+2. Virtual
+"""
+
 import numpy as np
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 import cv2
-from phantoms_argonne import shepp3d
-from skimage.transform import radon
 from threading_class import Get_radon
 import time
+
+__author__ = 'David Palecek'
+__credits__ = ['Teresa M Correia', 'Rui Guerra']
+__license__ = 'GPL'
 
 
 # TODO need to implement camera shutdown
@@ -56,15 +65,16 @@ class Sky_basic(QObject):
 
     def construct_data(self):
         if self.accum:
-            self.data_avg = np.sum(self.frame, axis=0)
+            self.data_avg = np.rot90(np.sum(self.frame, axis=0))
         else:
-            self.data_avg = np.mean(self.frame, axis=0)
+            self.data_avg = np.rot90(np.mean(self.frame, axis=0))
     _exit = pyqtSignal()
 
     @pyqtSlot()
     def exit(self):
         try:
             self.capture.release()
+            time.sleep(0.5)
         except Exception as e:
             print(f'Camera closing problem: {e}')
             return e
@@ -80,6 +90,7 @@ class Virtual(QObject):
         self.thread = QThread(parent=self)
         self.radon = Get_radon(self.size)
         self.radon.moveToThread(self.thread)
+        # self.thread.started.connect(self.radon.loading_message)
         self.thread.started.connect(self.radon.get_sinogram)
         self.radon.finished.connect(self.sino)
         self.radon.finished.connect(self.thread.quit)
@@ -94,7 +105,8 @@ class Virtual(QObject):
         # self.thread.quit()
 
     def report_progress(self, n):
-        print(n)
+        pass
+        # print(n)
 
     start_acquire = pyqtSignal()
     data_ready = pyqtSignal(np.ndarray, int, list)
@@ -103,8 +115,10 @@ class Virtual(QObject):
     def acquire(self):
         self.frame = np.zeros((self.average, self.size, self.size),
                               dtype=np.dtype(np.int16))
+        # for the case of aquiring more frames than sinogram size
+        idx_modulo = self.idx % self.size
         for i in range(self.average):
-            self.frame[i, :] = self.sinogram[:, :, self.idx]
+            self.frame[i, :] = self.sinogram[:, :, idx_modulo]
             time.sleep(0.01)
 
         self.construct_data()
