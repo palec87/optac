@@ -12,6 +12,11 @@ Sky basics camera cost 2.44 and 40 bucks, respectively.
 Control of the motors is done via Arduino board, notes on board
 wiring can be found in the docs (TODO docs)
 
+Cameras:
+1. Virtual
+2. Sky basic
+3. Phonefix
+
 TODO ROI for the cameras which support that.
 TODO Save images into a check radio button
 
