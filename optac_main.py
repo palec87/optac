@@ -376,7 +376,7 @@ class Gui(QtWidgets.QMainWindow):
         self.save_image('flat_field')
 
     def acquire_flat_field(self):
-        self.camera.average = self.frames_to_avg * 50
+        self.camera.set_average(self.frames_to_avg * 50)
         # mes = self.message_flat_field_acq()
         self.camera.start_acquire.emit()
         # mes.close()
@@ -615,7 +615,7 @@ class Gui(QtWidgets.QMainWindow):
     ###############
     def acquire(self):
         '''acquire data from camera'''
-        self.camera.average = self.frames_to_avg
+        self.camera.set_average(self.frames_to_avg)
         # only needed for the virtual camera
         if self.opt_running:
             self.camera.idx = self.step_counter
@@ -623,12 +623,12 @@ class Gui(QtWidgets.QMainWindow):
             self.camera.idx = self.frame_count
         self.camera.start_acquire.emit()
 
-    def post_acquire(self, frame, no_frame_count, minmax):
+    def post_acquire(self, frame, no_frame_count):
         try:
-            self.current_frame.update_frame(frame, no_frame_count, minmax)
+            self.current_frame.update_frame(frame, no_frame_count)
         except AttributeError:
             print('current_frame does not exist, creating a new one.')
-            self.current_frame = Frame(frame, no_frame_count, minmax)
+            self.current_frame = Frame(frame, no_frame_count)
 
         self.current_frame_plot()
         if self.stop_request is True:
@@ -803,9 +803,8 @@ class Gui(QtWidgets.QMainWindow):
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setText("Acquiring Flat-Field")
-        retval = msg.exec_()
+        # retval = msg.exec_()
         return msg
-
 
 
 def main():

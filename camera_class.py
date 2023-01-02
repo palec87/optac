@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 """
-Classes for various types of acquisition cameras.
+Classes for acquisition cameras.
 1. Sky Basic
 2. Virtual
+TODO Think about making cameras children of camera class
+because of bilerplate code and minimal required parameters
+for camera init
 """
 
 import numpy as np
@@ -23,24 +26,33 @@ class Sky_basic(QObject):
     def __init__(self, channel, col_ch, resolution, bin_factor) -> None:
         super(QObject, self).__init__()
         self.channel = channel  # which video input to use (typically 1 or 2)
-        self.res = resolution  # tuple (1920,1080), (1280,720), (640,480)
-        # self.average = average
+        self.res = resolution  # tuple (1280,720)
         self.binning_factor = bin_factor  # not sure it can do hardware binning
         self.accum = False
         self.col_ch = col_ch
         self.initialize()
 
     def initialize(self):
+        """initialize cv2 video capture stream"""
         self.capture = cv2.VideoCapture(1)
 
+    def set_average(self, num):
+        """Set how many captures are averaged into
+        single frame
+        """
+        self.average = num
+
     start_acquire = pyqtSignal()
-    data_ready = pyqtSignal(np.ndarray, int, list)
+    data_ready = pyqtSignal(np.ndarray, int)
 
     @pyqtSlot()
-    def acquire(self):  # acquires full matrix
+    def acquire(self):
+        """Acquire 3D matrix of the data to be averaged
+        into the single frame. In addition counts how
+        many times no data were retrieved from the camera.
+        """
         self.frame = np.zeros((self.average, self.res[1], self.res[0]),
                               dtype=np.dtype(np.int16))
-        self.minmax = []
         no_data_count = 0
         for i in range(self.average):
             ret, frame = self.capture.read()
@@ -54,16 +66,15 @@ class Sky_basic(QObject):
             else:
                 # retrieving only one channel
                 self.frame[i, :] = frame[:, :, self.col_ch]
-            # tracking minmax (should disappear to speed up)
-            self.minmax.append(0)
-            #     (np.amax(self.frame[i, :]),
-            #      np.amin(self.frame[i, :]))
-            # )
         self.construct_data()
-        self.data_ready.emit(self.data_avg, no_data_count, self.minmax)
+        self.data_ready.emit(self.data_avg, no_data_count)
         return
 
     def construct_data(self):
+        """
+        sum or mean over the averaged frames, depending if the
+        shots are getting accumulated or averaged, respectively.
+        """
         if self.accum:
             self.data_avg = np.rot90(np.sum(self.frame, axis=0))
         else:
@@ -72,6 +83,9 @@ class Sky_basic(QObject):
 
     @pyqtSlot()
     def exit(self):
+        """ Try to release the capture port of
+        the camera
+        """
         try:
             self.capture.release()
             time.sleep(0.5)
@@ -100,19 +114,43 @@ class Virtual(QObject):
         self.thread.start()
 
     def sino(self, data):
+        """Setting sinogram variable of phantom
+        data
+
+        Args:
+            data (np.ndarray):  Sinogram of 3D phantom
+        """
         print('setting sino variable')
         self.sinogram = data
         # self.thread.quit()
 
     def report_progress(self, n):
+        """Report progress
+        TODO to the progress bar
+        of the phantom sinogram generation
+
+        Args:
+            n (int): percent of progress
+        """
         pass
         # print(n)
 
+    # boilerplate code here
+    # create super Camera class
+    def set_average(self, num):
+        """Set how many captures are averaged into
+        single frame
+        """
+        self.average = num
+
     start_acquire = pyqtSignal()
-    data_ready = pyqtSignal(np.ndarray, int, list)
+    data_ready = pyqtSignal(np.ndarray, int)
 
     @pyqtSlot()
     def acquire(self):
+        """Simulates acquisition of 3D phantom data
+        as if in the experiment, each frame is rotation
+        of the phantom by 360/ size of the sinogram"""
         self.frame = np.zeros((self.average, self.size, self.size),
                               dtype=np.dtype(np.int16))
         # for the case of aquiring more frames than sinogram size
@@ -122,10 +160,15 @@ class Virtual(QObject):
             time.sleep(0.01)
 
         self.construct_data()
-        self.data_ready.emit(self.data_avg, 0, list(np.zeros(self.average)))
-        # return
+        self.data_ready.emit(self.data_avg, 0)
 
+    # also boilerplate, but in some cases data needs
+    # to be rotated 90deg (identify by shape!!)
     def construct_data(self):
+        """
+        sum or mean over the averaged frames, depending if the
+        shots are getting accumulated or averaged, respectively.
+        """
         if self.accum:
             self.data_avg = np.sum(self.frame, axis=0)
         else:

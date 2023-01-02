@@ -6,9 +6,6 @@ import time
 import sys
 from telemetrix import telemetrix
 
-# Instantiate the TelemetrixRpiPico class accepting all default parameters.
-board = telemetrix.Telemetrix()
-
 
 # Convenience values for the pins.
 # Note that the CS value is within a list
@@ -24,7 +21,7 @@ NUM_BYTES_TO_READ = 6
 
 """
  CALLBACKS
- 
+
  These functions process the data returned from the MPU9250
 """
 
@@ -67,7 +64,7 @@ def gyro_callback(report):
 
 
 # This is a utility function to read SPI data
-def read_data_from_device(register, number_of_bytes, callback):
+def read_data_from_device(board, register, number_of_bytes, callback):
     # noinspection GrazieInspection
     """
     This function reads the number of bytes using the register value.
@@ -89,29 +86,37 @@ def read_data_from_device(register, number_of_bytes, callback):
     time.sleep(.1)
 
 
-# initialize the device
-board.set_pin_mode_spi(CS)
+def main():
+    # Instantiate the TelemetrixRpiPico class accepting all default parameters.
+    board = telemetrix.Telemetrix()
 
-# reset the device
-board.spi_cs_control(CS_PIN, 0)
-board.spi_write_blocking([0x6B, 0])
-board.spi_cs_control(CS_PIN, 1)
+    # initialize the device
+    board.set_pin_mode_spi(CS)
 
-time.sleep(.1)
+    # reset the device
+    board.spi_cs_control(CS_PIN, 0)
+    board.spi_write_blocking([0x6B, 0])
+    board.spi_cs_control(CS_PIN, 1)
 
-# get the device ID
-read_data_from_device(0x75, 1, the_device_callback)
+    time.sleep(.1)
 
-while True:
-    try:
-        time.sleep(1)
-        # get the acceleration values
-        read_data_from_device(0x3b, 6, accel_callback)
-        time.sleep(.1)
+    # get the device ID
+    read_data_from_device(0x75, 1, the_device_callback)
 
-        # get the gyro values
-        read_data_from_device(0x43, 6, gyro_callback)
-        time.sleep(.1)
-    except KeyboardInterrupt:
-        board.shutdown()
-        sys.exit(0)
+    while True:
+        try:
+            time.sleep(1)
+            # get the acceleration values
+            read_data_from_device(board, 0x3b, 6, accel_callback)
+            time.sleep(.1)
+
+            # get the gyro values
+            read_data_from_device(board, 0x43, 6, gyro_callback)
+            time.sleep(.1)
+        except KeyboardInterrupt:
+            board.shutdown()
+            sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()

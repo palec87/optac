@@ -130,5 +130,6 @@ dmypy.json
 
 # owner's
 lif.json
-travis.yml
+.travis.yml
 .circleci/
+.github/workflows/

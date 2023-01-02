@@ -39,8 +39,13 @@ class MainWindow(QMainWindow):
         # self.show()
 
 
-# Create a Qt widget, which will be our window.
-app = QApplication(sys.argv)
-window = MainWindow()
-window.show()
-app.exec()
+def main():
+    # Create a Qt widget, which will be our window.
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    app.exec()
+
+
+if __name__ == '__main__':
+    main()
