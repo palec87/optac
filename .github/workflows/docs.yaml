@@ -3,9 +3,13 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   docs:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v10
+      - uses: actions/setup-python@v4
       - name: Install dependencies
         run: |
           pip install sphinx sphinx_rtd_theme
