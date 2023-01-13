@@ -61,7 +61,9 @@ def test_init(Viewer):
      ('imageViewer.ui.blue_ch', 2), ('imageViewer.ui.amp_ch', 3)])
 def test_channel_funcs(Viewer, test_input, expected):
     _, imageViewer, qtbot = Viewer
+    QtTest.QTest.qWait(int(0.5*100))
     qtbot.mouseClick(eval(test_input), QtCore.Qt.LeftButton)
+    QtTest.QTest.qWait(int(0.5*100))
     assert imageViewer.channel == expected
 
 
