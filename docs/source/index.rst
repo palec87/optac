@@ -1,14 +1,18 @@
 .. OPTac documentation master file, created by
-   sphinx-quickstart on Fri Dec 30 16:59:46 2022.
+   sphinx-quickstart on Fri Jan 13 14:47:44 2023.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
 Welcome to OPTac's documentation!
 =================================
+.. automodule:: optac_main
+    :members:
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
+   app
 
 
 

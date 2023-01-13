@@ -41,7 +41,8 @@ class Camera(QObject):
             )
 
     def set_average(self, num):
-        """Set how many captures are averaged into
+        """
+        Set how many captures are averaged into
         single frame
         """
         self.average = num
@@ -233,7 +234,7 @@ class Virtual(QObject):
     def acquire(self):
         """Simulates acquisition of 3D phantom data
         as if in the experiment, each frame is rotation
-        of the phantom by 360/ size of the sinogram"""
+        of the phantom by 360 divided by size of the sinogram"""
         self.frame = np.zeros((self.average, self.size, self.size),
                               dtype=np.dtype(np.int16))
         # for the case of aquiring more frames than sinogram size

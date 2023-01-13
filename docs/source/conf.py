@@ -5,14 +5,15 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
 import os
 import sys
 # for conversion from markdown to html
 import recommonmark.parser
-sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../../'))
 
 project = 'OPTac'
-copyright = '2022, David Palecek'
+copyright = '2023, David Palecek'
 author = 'David Palecek'
 release = '0.0.1'
 
@@ -23,11 +24,9 @@ extensions = [
     'sphinx.ext.duration',
     'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'recommonmark',
 ]
-
-# The master toctree document.
-master_doc = "index"
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
