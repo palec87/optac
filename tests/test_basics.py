@@ -29,14 +29,14 @@ def test_raises():
 #     return test_app
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='session')
 def qtbot_session(qapp, request):
     print("  SETUP qtbot")
     result = QtBot(qapp)
     return result
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope='session')
 def Viewer(request):
     print("  SETUP GUI")
     app, imageViewer = main_GUI()
