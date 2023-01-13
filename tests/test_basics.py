@@ -7,6 +7,10 @@ from PyQt5 import QtCore
 from optac_main import main_GUI
 from PyQt5 import QtTest
 from pytestqt.plugin import QtBot
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMessageBox
+)
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
@@ -20,13 +24,6 @@ def divide(x, y):
 def test_raises():
     with pytest.raises(ZeroDivisionError):
         divide(3, 0)
-
-
-# @pytest.fixture
-# def app(qtbot):
-#     test_app = Gui('lif.json')
-#     qtbot.addWidget(test_app)
-#     return test_app
 
 
 @pytest.fixture(scope='session')
@@ -76,62 +73,68 @@ def test_channel_funcs(Viewer, test_input, expected):
 #     assert app.channel == expected
 
 
-# @pytest.mark.parametrize(
-#     'func, set, attr, expected',
-#     [('app.ui.angle.setValue', 123, 'app.angle', 123),
-#      ('app.ui.angle.setValue', -370, 'app.angle', -360),
-#      ('app.ui.angle.setValue', 400, 'app.angle', 400),
-#      ('app.ui.motor_speed.setValue', 432, 'app.motor_speed', 432),
-#      ('app.ui.motor_speed.setValue', -10, 'app.motor_speed', 100),
-#      ('app.ui.motor_speed.setValue', 105, 'app.motor_speed', 105),
-#      ('app.ui.motor_steps.setValue', 73, 'app.motor_steps', 73),
-#      ('app.ui.motor_steps.setValue', -10, 'app.motor_steps', 2),
-#      ('app.ui.frame_rate.setValue', -10, 'app.frame_rate', 1),
-#      ('app.ui.frame_rate.setValue', 30, 'app.frame_rate', 30),
-#      ('app.ui.n_frames.setValue', 0, 'app.n_frames', 1),
-#      ('app.ui.n_frames.setValue', -10, 'app.n_frames', 1),
-#      ('app.ui.n_frames.setValue', 29, 'app.n_frames', 29),
-#      ('app.ui.frames2avg.setValue', 0, 'app.frames_to_avg', 1),
-#      ('app.ui.frames2avg.setValue', 25, 'app.frames_to_avg', 25),
-#      ('app.ui.recon_px.setValue', -10, 'app.radon_idx', 0),
-#      ('app.ui.recon_px.setValue', 1010, 'app.radon_idx', 1010),
-#      ])
-# def test_update_func(app, func, set, attr, expected):
-#     eval(func + '(set)')
-#     time.sleep(0.1)
-#     assert eval(attr) == expected
+@pytest.mark.parametrize(
+    'func, set, attr, expected',
+    [('imageViewer.ui.angle.setValue', 123, 'imageViewer.angle', 123),
+     ('imageViewer.ui.angle.setValue', -370, 'imageViewer.angle', -360),
+     ('imageViewer.ui.angle.setValue', 400, 'imageViewer.angle', 400),
+     ('imageViewer.ui.motor_speed.setValue', 432, 'imageViewer.motor_speed', 432),
+     ('imageViewer.ui.motor_speed.setValue', -10, 'imageViewer.motor_speed', 100),
+     ('imageViewer.ui.motor_speed.setValue', 105, 'imageViewer.motor_speed', 105),
+     ('imageViewer.ui.motor_steps.setValue', 73, 'imageViewer.motor_steps', 73),
+     ('imageViewer.ui.motor_steps.setValue', -10, 'imageViewer.motor_steps', 2),
+     ('imageViewer.ui.frame_rate.setValue', -10, 'imageViewer.frame_rate', 1),
+     ('imageViewer.ui.frame_rate.setValue', 30, 'imageViewer.frame_rate', 30),
+     ('imageViewer.ui.n_frames.setValue', 0, 'imageViewer.n_frames', 1),
+     ('imageViewer.ui.n_frames.setValue', -10, 'imageViewer.n_frames', 1),
+     ('imageViewer.ui.n_frames.setValue', 29, 'imageViewer.n_frames', 29),
+     ('imageViewer.ui.frames2avg.setValue', 0, 'imageViewer.frames_to_avg', 1),
+     ('imageViewer.ui.frames2avg.setValue', 25, 'imageViewer.frames_to_avg', 25),
+     ('imageViewer.ui.radon_idx.setValue', -10, 'imageViewer.radon_idx', 0),
+     ('imageViewer.ui.radon_idx.setValue', 1010, 'imageViewer.radon_idx', 1010),
+     ])
+def test_update_func(Viewer, func, set, attr, expected):
+    _, imageViewer, qtbot = Viewer
+    eval(func + '(set)')
+    QtTest.QTest.qWait(int(0.5*100))
+    assert eval(attr) == expected
 
 
-# @pytest.mark.parametrize(
-#     'ui_attr, set, app_attr, expected',
-#     [("app.ui.accum_shots", False, 'app.accum_shots', True),
-#      ('app.ui.accum_shots', True, 'app.accum_shots', False),
-#      ('app.ui.live_reconstruct', False, 'app.live_recon', True),
-#      ('app.ui.live_reconstruct', True, 'app.live_recon', False),
-#      ('app.ui.toggle_hist', True, 'app.toggle_hist', False),
-#      ('app.ui.toggle_hist', False, 'app.toggle_hist', True),
-#      ])
-# def test_radios(qtbot, app, ui_attr, set, app_attr, expected):
-#     eval(ui_attr + '.setChecked(set)')
-#     qtbot.mouseClick(eval(ui_attr), QtCore.Qt.LeftButton, delay=20)
-#     assert eval(app_attr) == expected
+@pytest.mark.parametrize(
+    'ui_attr, set, app_attr, expected',
+    [("imageViewer.ui.accum_shots", False, 'imageViewer.accum_shots', True),
+     ('imageViewer.ui.accum_shots', True, 'imageViewer.accum_shots', False),
+     ('imageViewer.ui.live_recon', False, 'imageViewer.live_recon', True),
+     ('imageViewer.ui.live_recon', True, 'imageViewer.live_recon', False),
+     ('imageViewer.ui.toggle_hist', True, 'imageViewer.toggle_hist', False),
+     ('imageViewer.ui.toggle_hist', False, 'imageViewer.toggle_hist', True),
+     ])
+def test_radios(Viewer, ui_attr, set, app_attr, expected):
+    _, imageViewer, qtbot = Viewer
+    eval(ui_attr + '.setChecked(set)')
+    qtbot.mouseClick(eval(ui_attr), QtCore.Qt.LeftButton, delay=20)
+    assert eval(app_attr) == expected
 
 
 # @pytest.mark.parametrize(
 #     'val_min, val_max, diag, expected',
 #     [(100, 50, True, 1), (200, 250, False, 50), (-200, 100, False, 100)])
-# def test_hist(qtbot, app, val_min, val_max, diag, expected):
+# def test_hist(Viewer, val_min, val_max, diag, expected):
+#     _, imageViewer, qtbot = Viewer
 #     '''ensure that min is lower than max'''
 #     def handle_dialog():
-#         mbox = QtWidgets.QApplication.activeWindow()
-#         ok_but = mbox.button(QtWidgets.QMessageBox.Ok)
+#         mbox = QApplication.activeWindow()
+#         ok_but = mbox.button(QMessageBox.Ok)
+#         QtTest.QTest.qWait(int(0.5*100))
 #         qtbot.mouseClick(ok_but, QtCore.Qt.LeftButton, delay=20)
 
-#     app.ui.min_hist.setValue(val_min)
+#     imageViewer.ui.min_hist.setValue(val_min)
 #     if diag:
+#         QtTest.QTest.qWait(int(0.5*100))
 #         QtCore.QTimer.singleShot(100, handle_dialog)
-#     app.ui.max_hist.setValue(val_max)
-#     diff = app.max_hist - app.min_hist
+#         QtTest.QTest.qWait(int(0.5*100))
+#     imageViewer.ui.max_hist.setValue(val_max)
+#     diff = imageViewer.max_hist - imageViewer.min_hist
 #     assert diff == expected
 
 
