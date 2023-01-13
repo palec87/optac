@@ -19,6 +19,10 @@ Small motor which comes with Arduino starting kit (28BYJ-48) is
 denoted as Uno-stepper
 '''
 
+__author__ = 'David Palecek'
+__credits__ = ['Teresa M Correia', 'Rui Guerra']
+__license__ = 'GPL'
+
 import sys
 import os
 from time import gmtime, strftime
@@ -31,7 +35,7 @@ from gui.optac_ui import Ui_MainWindow
 import pyqtgraph as pg
 
 from motor_class import Stepper
-from camera_class import Sky_basic, Virtual
+from camera_class import Sky_basic, Virtual, Phonefix
 from frame_processing import Frame
 from radon_back_projection import Radon
 
@@ -99,8 +103,9 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.camera_type_list.currentIndexChanged.connect(
             self._update_camera_type
             )
-        self.ui.camera_type_list.addItem('virtual')
-        self.ui.camera_type_list.addItem('Sky (1280x720)')
+        self.ui.camera_type_list.addItems(
+            ['virtual', 'Sky (1280x720)', 'Phonefix'],
+            )
         self.ui.camera_port.valueChanged.connect(self._update_camera_port)
         self.ui.flat_field_btn.clicked.connect(self.exec_flat_field_btn)
 
@@ -120,6 +125,7 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.run_opt_btn.clicked.connect(self.exec_run_opt_btn)
         self.ui.live_recon.toggled.connect(self._update_live_recon_btn)
         self.ui.radon_idx.valueChanged.connect(self._update_radon_idx)
+        self.ui.n_sweeps.valueChanged.connect(self._update_n_sweeps)
 
         # Control panel
         self.ui.stop_btn.clicked.connect(self.exec_stop_btn)
@@ -152,6 +158,7 @@ class Gui(QtWidgets.QMainWindow):
         self.motor_speed = self.ui.motor_speed.value()
         self.angle = self.ui.angle.value()
         self.motor_steps = self.ui.motor_steps.value()
+        self.n_sweeps = self.ui.n_sweeps.value()
         self.frame_rate = self.ui.frame_rate.value()
         self.camera_port = self.ui.camera_port.value()
         self.frames_to_avg = self.ui.frames2avg.value()
@@ -170,6 +177,7 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.motor_speed.setValue(d['motor_speed'])
         self.ui.angle.setValue(d['angle'])
         self.ui.motor_steps.setValue(d['motor_steps'])
+        self.ui.n_sweeps.setValue(d['n_sweeps'])
         self.ui.frame_rate.setValue(d['frame_rate'])
         self.ui.camera_port.setValue(d['camera_port'])
         self.ui.frames2avg.setValue(d['frames_to_avg'])
@@ -189,6 +197,7 @@ class Gui(QtWidgets.QMainWindow):
         vals['motor_speed'] = self.motor_speed
         vals['angle'] = self.angle
         vals['motor_steps'] = self.motor_steps
+        vals['n_sweeps'] = self.n_sweeps
         vals['frame_rate'] = self.frame_rate
         vals['camera_port'] = self.camera_port
         vals['frames_to_avg'] = self.frames_to_avg
@@ -208,6 +217,7 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.motor_speed.setValue(500)
         self.ui.angle.setValue(400)
         self.ui.motor_steps.setValue(4)
+        self.ui.n_sweeps.setValue(1)
         self.ui.frame_rate.setValue(24)
         self.ui.camera_port.setValue(1)
         self.ui.frames2avg.setValue(10)
@@ -253,7 +263,6 @@ class Gui(QtWidgets.QMainWindow):
 
     def _update_folder_path(self):
         """Update saving folder path from UI"""
-        print('ahoj', self.main_folder)
         self.ui.folder_path.setText(self.main_folder)
 
     def _update_radon_idx(self):
@@ -311,6 +320,12 @@ class Gui(QtWidgets.QMainWindow):
         """
         self.motor_steps = self.ui.motor_steps.value()
 
+    def _update_n_sweeps(self):
+        """update number of sweeps, repetitions of the
+        single OPT scan
+        """
+        self.n_sweeps = self.ui.n_sweeps.value()
+
     def _update_n_frames(self):
         """Update from UI how many frames to aquire
         Does not take into account averaging per frame.
@@ -320,9 +335,8 @@ class Gui(QtWidgets.QMainWindow):
     def _update_camera_type(self):
         """Update camera type from UI
         """
-        print('initializing')
         self.camera_type = self.ui.camera_type_list.currentIndex()
-        self.initialize_camera()
+        # self.initialize_camera()
 
     def _update_motor_type(self):
         """Update motor type from the UI"""
@@ -399,7 +413,8 @@ class Gui(QtWidgets.QMainWindow):
         else:
             self.motor_on = True
             self.ui.motor_init_btn.setDisabled(True)
-            self.ui.motor_close_btn.setDisabled(False)
+            self.ui.motor_close_btn.setEnabled(True)
+            self.append_history('motor ready.')
 
     def initialize_camera(self):
         self.append_history('Initializing camera')
@@ -416,6 +431,11 @@ class Gui(QtWidgets.QMainWindow):
             self.resolution = (1280, 720)
             self.initialize_sky_basic()
             self.ui.motor_steps.setEnabled(True)
+        elif self.camera_type == 2:
+            # phonefix
+            self.resolution = (1920, 1080)
+            self.initialize_phonefix()
+            self.ui.motor_steps.setEnabled(True)
 
         self.camera_on = True
         self.acquire_thread = QtCore.QThread(parent=self)
@@ -425,6 +445,7 @@ class Gui(QtWidgets.QMainWindow):
         self.camera.data_ready.connect(self.post_acquire)
 
     def initialize_sky_basic(self):
+        self.simul_mode = False
         self.camera = Sky_basic(
                             channel=self.camera_port,
                             col_ch=self.channel,
@@ -432,14 +453,22 @@ class Gui(QtWidgets.QMainWindow):
                             bin_factor=1
                             )
 
+    def initialize_phonefix(self):
+        self.simul_mode = False
+        self.append_history('this camera can take longer to INIT')
+        self.camera = Phonefix(
+                            channel=self.camera_port,
+                            col_ch=self.channel,
+                            res=self.resolution,
+                            )
+
     def initialize_virtual_camera(self):
+        print('initializing virtual camera')
         self.simul_mode = True
+        self.append_history(str(self.simul_mode))
         self.camera = Virtual(self.simul_angles)
 
     def exec_get_n_frames_btn(self):
-        self.append_history(
-            f'Acq. {self.n_frames} frames, avg={self.frames_to_avg}'
-        )
         self.frame_count_set(0)
         self.no_data_count_set(0)
 
@@ -451,17 +480,18 @@ class Gui(QtWidgets.QMainWindow):
 
     def _check_motors(self):
         self.unit_of_progress = 100/self.motor_steps
-        self.step_counter = 0
+        self.step_count = 0
 
         if self.simul_mode:
             return
 
         if not self.motor_on:
             self.initialize_stepper()
-            self.ui.angle.setValue(
-                int(self.stepper.full_rotation / self.motor_steps)
-            )
-            self.append_history(f'ANGLE: {self.angle}')
+
+        self.ui.angle.setValue(
+            int(self.stepper.full_rotation / self.motor_steps)
+        )
+        self.append_history(f'ANGLE: {self.angle}')
 
     def exec_run_opt_btn(self):
         self.create_saving_folder()
@@ -472,8 +502,11 @@ class Gui(QtWidgets.QMainWindow):
         self._check_motors()
 
         self.collect_metadata()
-        self.metadata['exp_start'] = self.get_time_now()
+        self.metadata['sweep_start'] = []
+        self.metadata['sweep_finish'] = []
+        self.metadata['sweep_start'].append(self.get_time_now())
         self.ui.progressBar.setValue(0)
+        self.sweep_count_set(0)
         self.run_sweep()
 
     def exec_motor_close_btn(self):
@@ -487,6 +520,7 @@ class Gui(QtWidgets.QMainWindow):
 
     def exec_step_motor_btn(self):
         if self.simul_mode:
+            self.append_history('simul mode, no rotation enabled')
             return
         self.append_history(f'motor speed: {self.stepper.speed}')
         self.stepper.move_relative(self.angle)
@@ -562,6 +596,15 @@ class Gui(QtWidgets.QMainWindow):
         self.no_data_count = count
         self.ui.no_data_count.display(self.no_data_count)
 
+    def sweep_count_set(self, count):
+        """update sweep count during OPT acquisition
+
+        Args:
+            count (int): sweep number
+        """
+        self.sweep_count = count
+        self.ui.sweep_count.display(self.sweep_count)
+
     def disable_btns(self):
         self.ui.stepper_box.setDisabled(True)
         self.ui.camera_box.setDisabled(True)
@@ -575,30 +618,55 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.measure_box.setDisabled(False)
 
     def post_sweep(self):
-        self.metadata['exp_end'] = self.get_time_now()
-        self.save_metadata()
-        self.enable_btns()
-        self.save_images = False
-        self.opt_running = False
-        self.idling()
+        """Register time of sweep finish.
+        If last sweep, close experiment with post_opt()
+        If not, run next sweep.
+        """
+        self.metadata['sweep_finish'].append(self.get_time_now())
+        self.sweep_count_set(self.sweep_count + 1)
+        if self.sweep_count == self.n_sweeps:
+            self.post_opt()
+        else:
+            self.clear_sweep_data()
+            self.run_sweep()
+
+    def clear_sweep_data(self):
+        self.current_frame = None
+        self.step_count = 0
 
     def collect_metadata(self):
-        self.metadata['motor_steps'] = self.motor_steps
+        self.metadata['n_steps'] = self.motor_steps
+        self.metadata['n_sweeps'] = self.n_sweeps
         self.metadata['avg_per_frame'] = self.frames_to_avg
         self.metadata['images_per_step'] = self.n_frames
 
+        if self.camera_type in [0, 1]:
+            self.metadata['dynamic_range'] = np.int8
+        self.metadata['user notes'] = self.ui.expr_metadata.toPlainText()
+
     def save_metadata(self):
+        """Saving metadata dictionary in json format
+        """
         file_path = os.path.join(self.exp_path, 'metadata.txt')
         with open(file_path, 'w') as f:
             f.write(json.dumps(self.metadata))
 
     def run_sweep(self):
-        self.append_history(f'STEP {self.step_counter}')
+        self.append_history(f'STEP {self.step_count}')
         self.exec_get_n_frames_btn()
 
     def save_image(self, fname=None):
+        """Saving frames as images or text files in case accum shots
+        is selected, which results in float numbers. Default file name
+        is sweep_step_frame numbers separated by '_'.
+
+        Args:
+            fname (str, optional): file name, used in cases of
+            saving calibrations etc. Defaults to None.
+        """
         if not fname:
-            fname = '_'.join([str(self.step_counter), 
+            fname = '_'.join([str(self.sweep_count),
+                              str(self.step_count),
                               str(self.frame_count)])
         if not self.exp_path:
             self.create_saving_folder()
@@ -618,7 +686,7 @@ class Gui(QtWidgets.QMainWindow):
         self.camera.set_average(self.frames_to_avg)
         # only needed for the virtual camera
         if self.opt_running:
-            self.camera.idx = self.step_counter
+            self.camera.idx = self.step_count
         else:
             self.camera.idx = self.frame_count
         self.camera.start_acquire.emit()
@@ -631,13 +699,18 @@ class Gui(QtWidgets.QMainWindow):
             self.current_frame = Frame(frame, no_frame_count)
 
         self.current_frame_plot()
+
+        # check is stop is requested
         if self.stop_request is True:
             self.finish()
 
+        # saving
         if self.save_images:
             self.save_image()
+
         self.frame_count_set(self.frame_count+1)
 
+        # checking for end of current step
         if self.frame_count >= self.n_frames:
             if self.opt_running:
                 self.post_step()
@@ -646,22 +719,27 @@ class Gui(QtWidgets.QMainWindow):
         else:
             self.acquire()
 
-        if self.stop_request is True:
-            self.finish()
-
     def post_step(self):
         self.ui.progressBar.setValue(
-                int((self.step_counter+1)*self.unit_of_progress))
+                int((self.step_count+1)*self.unit_of_progress))
         if self.live_recon:
             self.update_recon()
             self.current_recon_plot()
 
-        if self.step_counter == self.motor_steps-1:
+        if self.step_count == self.motor_steps-1:
             self.post_sweep()
         else:
-            self.step_counter += 1
+            self.step_count += 1
             self.exec_step_motor_btn()
             self.run_sweep()
+
+    def post_opt(self):
+        self.save_metadata()
+        self.enable_btns()
+        self.save_images = False
+        self.opt_running = False
+        self.clear_sweep_data()
+        self.idling()
 
     ###############################
     # Metadata, saving, reporting #
@@ -686,15 +764,22 @@ class Gui(QtWidgets.QMainWindow):
     # Plotting #
     ############
     def update_recon(self):
-        if not self.step_counter:
-            print('Creating a new reconstruction object.')
-            self.current_recon = Radon(
-                self.current_frame.frame[self.radon_idx, :],
-                self.motor_steps)
-        else:
+        # new version with catching exception
+        try:
             self.current_recon.update_recon(
                 self.current_frame.frame[self.radon_idx, :],
-                self.step_counter)
+                self.step_count)
+        except AttributeError:
+            try:
+                print('Creating a new reconstruction object.')
+                self.current_recon = Radon(
+                    self.current_frame.frame[self.radon_idx, :],
+                    self.motor_steps)
+            except IndexError as e:
+                self.append_history('Reconstruction index too high')
+                # TODO save to looger
+                print(e)
+                self.post_opt()
 
     def create_plots(self):
         '''defines defaults for each graph'''
@@ -709,8 +794,15 @@ class Gui(QtWidgets.QMainWindow):
     def current_frame_plot(self):
         '''last frame plot in Align tab'''
         try:
-            # this works
+            # this notworks
+            # plot = pg.PlotItem()
+            # plot.setLabel(axis='left', text='Y-axis')
+            # plot.setLabel(axis='bottom', text='X-axis')
+            # set the plot to ImageView's view
+            # self.ui.camera_live = pg.ImageView(view=plot)
+
             self.ui.camera_live.setImage(np.rot90(self.current_frame.frame))
+            # self.ui.camera_live.setLabel(axis='left', text='Y-axis')
             self.ui.camera_live.ui.splitter.setSizes([1, 1])
             if self.toggle_hist:
                 self.hist.setLevels(
@@ -798,7 +890,7 @@ class Gui(QtWidgets.QMainWindow):
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
         retval = msg.exec_()
         return retval
-    
+
     def message_flat_field_acq(self):
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
@@ -807,14 +899,15 @@ class Gui(QtWidgets.QMainWindow):
         return msg
 
 
-def main():
+def main_GUI():
     app = QtWidgets.QApplication(sys.argv)
     init_values_file = os.path.join(os.getcwd(), 'lif.json')
     gui = Gui(init_values_file=init_values_file)
     gui.show()
     gui.create_plots()
-    sys.exit(app.exec_())
+    return app, gui
 
 
 if __name__ == '__main__':
-    main()
+    app, gui = main_GUI()
+    sys.exit(app.exec_())
