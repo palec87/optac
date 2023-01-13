@@ -15,9 +15,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        sudo apt --fix-missing update
-        sudo apt install xvfb x11-utils libxkbcommon-x11-0
-        sudo apt install libxcb-xinerama0 pyqt5-dev-tools
+        # sudo apt --fix-missing update
+        sudo apt-get -o Acquire::Retries=3 update
+        sudo apt-get install xvfb x11-utils libxkbcommon-x11-0
+        sudo apt-get install libxcb-xinerama0 pyqt5-dev-tools
         python -m pip install --upgrade pip
         pip install pyside2 pytest coverage pytest-qt
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
