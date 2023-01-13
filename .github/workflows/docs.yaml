@@ -16,7 +16,7 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Sphinx build
         run: |
-          sphinx-build docs/source build
+          sphinx-build docs/source docs/build/html
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
