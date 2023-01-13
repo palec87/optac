@@ -1,0 +1,30 @@
+name: test package
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt install -y xvfb x11-utils libxkbcommon-x11-0
+        sudo apt install libxcb-xinerama0 pyqt5-dev-tools
+        python -m pip install --upgrade pip
+        pip install pyside2 pytest coverage pytest-qt
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Test
+      env:
+        QT_DEBUG_PLUGINS: 1
+      run: |
+        ulimit -c unlimited
+        xvfb-run --auto-servernum python -m pytest
+        # sudo xvfb-run --auto-servernum run -m pytest

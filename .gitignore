@@ -132,4 +132,3 @@ dmypy.json
 lif.json
 .travis.yml
 .circleci/
-.github/workflows/
