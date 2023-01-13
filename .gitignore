@@ -133,3 +133,4 @@ lif.json
 .travis.yml
 .circleci/
 # .github/workflows/actions_test.yaml
+.github/workflows/docs.yaml
