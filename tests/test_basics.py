@@ -116,26 +116,29 @@ def test_radios(Viewer, ui_attr, set, app_attr, expected):
     assert eval(app_attr) == expected
 
 
-# @pytest.mark.parametrize(
-#     'val_min, val_max, diag, expected',
-#     [(100, 50, True, 1), (200, 250, False, 50), (-200, 100, False, 100)])
-# def test_hist(Viewer, val_min, val_max, diag, expected):
-#     _, imageViewer, qtbot = Viewer
-#     '''ensure that min is lower than max'''
-#     def handle_dialog():
-#         mbox = QApplication.activeWindow()
-#         ok_but = mbox.button(QMessageBox.Ok)
-#         QtTest.QTest.qWait(int(0.5*100))
-#         qtbot.mouseClick(ok_but, QtCore.Qt.LeftButton, delay=20)
+@pytest.mark.parametrize(
+    'val_min, val_max, diag1, diag2, expected',
+    [(100, 50, True, True, 1),
+     (200, 250, True, False, 50),
+     (-200, 100, False, False, 100)])
+def test_hist(Viewer, val_min, val_max, diag1, diag2, expected):
+    _, imageViewer, qtbot = Viewer
+    '''ensure that min is lower than max'''
+    def handle_dialog():
+        mbox = QApplication.activeWindow()
+        ok_but = mbox.button(QMessageBox.Ok)
+        qtbot.mouseClick(ok_but, QtCore.Qt.LeftButton, delay=20)
 
-#     imageViewer.ui.min_hist.setValue(val_min)
-#     if diag:
-#         QtTest.QTest.qWait(int(0.5*100))
-#         QtCore.QTimer.singleShot(100, handle_dialog)
-#         QtTest.QTest.qWait(int(0.5*100))
-#     imageViewer.ui.max_hist.setValue(val_max)
-#     diff = imageViewer.max_hist - imageViewer.min_hist
-#     assert diff == expected
+    imageViewer.ui.min_hist.setValue(val_min)
+    if diag1:
+        QtCore.QTimer.singleShot(100, handle_dialog)
+
+    imageViewer.ui.max_hist.setValue(val_max)
+    if diag2:
+        QtCore.QTimer.singleShot(100, handle_dialog)
+
+    diff = imageViewer.max_hist - imageViewer.min_hist
+    assert diff == expected
 
 
 # def test_check_hist(app):
