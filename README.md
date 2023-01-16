@@ -2,6 +2,7 @@
 Optical Projection Tomography Acquisition GUI
 
 <a href="https://codeclimate.com/github/palec87/optac/maintainability"><img src="https://api.codeclimate.com/v1/badges/c79bc2c7c22c1d69a585/maintainability" /></a>
+![example workflow](https://github.com/palec87/optac/actions/workflows/actions_test.yaml/badge.svg)
 
 ## Implemented Hardware
 ### Stepper motors
