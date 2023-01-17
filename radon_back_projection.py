@@ -15,10 +15,11 @@ class Radon():
         self.radon_img_shape = self.radon_img.shape[0]
         self.offset = (self.radon_img_shape-self.output_size)//2
         self.projection_size_padded = max(
-                                        64,
-                                        int(2 ** np.ceil(np.log2(2 * self.radon_img_shape))))
+                64,
+                int(2 ** np.ceil(np.log2(2 * self.radon_img_shape))))
         self.radius = self.output_size // 2
-        self.xpr, self.ypr = np.mgrid[:self.output_size, :self.output_size] - self.radius
+        self.xpr, self.ypr = np.mgrid[:self.output_size,
+                                      :self.output_size] - self.radius
         self.x = np.arange(self.radon_img_shape) - self.radon_img_shape // 2
         self.theta = np.deg2rad(
                         np.linspace(0., 360., self.n_steps, endpoint=False)

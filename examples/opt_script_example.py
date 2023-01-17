@@ -19,6 +19,7 @@ print(exp.n_sweeps, exp.radon_idx)
 exp.init_camera('sky', port=0, channel=3, res=(640, 480))
 exp.get_camera_params()
 
-# For the case of 
+# For the case of
 # exp.camera.rotate = True
-exp.get_frames(10, avg=10)
+exp.set_live_recon(True)
+exp.get_frames(3, avg=10)

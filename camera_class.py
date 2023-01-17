@@ -14,7 +14,7 @@ Virtual camera is a separate class.
 import numpy as np
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 import cv2
-from optac.threading_class import Get_radon
+from .threading_class import Get_radon
 import time
 
 __author__ = 'David Palecek'

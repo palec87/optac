@@ -12,10 +12,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from time import gmtime, strftime
 
-from optac.camera_class import Basic_usb, Dmk
-from optac.motor_class import Stepper
-from optac.exceptions import NoMotorInitialized
-from optac.radon_back_projection import Radon
+from .camera_class import Basic_usb, Dmk
+from .motor_class import Stepper
+from .exceptions import NoMotorInitialized
+from .radon_back_projection import Radon
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
@@ -82,7 +82,12 @@ class Opt():
             if self.save_data:
                 self.save_image()
             self.frame_count += 1
-        self.plot_recon(img=None)
+
+        if self.live_recon:
+            try:
+                self.plot_recon(img=None)
+            except AttributeError as e:
+                print(f'Proble plotting reconstruction: {e}')
 
     def save_image(self, fname=None):
         """

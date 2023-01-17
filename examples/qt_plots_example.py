@@ -5,9 +5,7 @@ Sandbox for testing pyqtgraph widgets, which are very confusing to me.
 
 from PyQt5.QtWidgets import (
     QApplication,
-    QWidget,
     QMainWindow,
-    QHBoxLayout,
     QGraphicsView)
 import pyqtgraph as pg
 import numpy as np
@@ -24,19 +22,12 @@ class MainWindow(QMainWindow):
         data = np.loadtxt(os.getcwd()+'\\data\\sinogram.txt')
         self.setWindowTitle("My App")
 
-        # self.imv = pg.ImageView()
-        # self.imv.setImage(data)
-        # self.setCentralWidget(self.imv)
-
         self.widget = QGraphicsView()
         self.imv = pg.ImageView(self.widget)
         self.imv.setImage(data, pos=(100, 100))
         self.imv.setHistogramLabel('pixel intensity')
 
-        # self.widget.setLayout(QHBoxLayout())
-        # self.widget.layout().addWidget(self.imv)
         self.setCentralWidget(self.widget)
-        # self.show()
 
 
 def main():
