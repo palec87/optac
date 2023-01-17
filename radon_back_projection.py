@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 class Radon():
-    def __init__(self, line, steps) -> None:
+    def __init__(self, line, steps: int) -> None:
         self.line = line
         self.n_steps = steps
         self.sinogram = np.zeros((len(line), steps))

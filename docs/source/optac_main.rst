@@ -1,7 +1,7 @@
-OPTac
-=====
+GUI
+===
 
 .. autosummary::
    :toctree: generated
 
-   optac_main
+    optac_main

@@ -1,7 +1,7 @@
-OPTac
-=====
+Camera
+======
 
 .. autosummary::
    :toctree: generated
 
-   optac_main
+   camera_class

@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 """
 Classes for acquisition cameras.
+
+Camera class is a parent class to all the 'real' cameras.
+Virtual camera is a separate class.
+
 1. Sky Basic
 2. Virtual
-TODO Think about making cameras children of camera class
-because of bilerplate code and minimal required parameters
-for camera init
+3. Phonefix
+4. DMK 37BUX252
 """
 
 import numpy as np
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 import cv2
-from threading_class import Get_radon
+from optac.threading_class import Get_radon
 import time
 
 __author__ = 'David Palecek'
@@ -20,19 +23,33 @@ __license__ = 'GPL'
 
 
 class Camera(QObject):
-    def __init__(self, channel, col_ch, res) -> None:
-        super(QObject, self).__init__()
-        self.channel = channel
-        self.col_ch = col_ch
-        self.accum = False
-        self.res = res  # tuple
+    """
+    Parent class to all real acquisition cameras using USB.
 
+    Args:
+        QObject (_type_): inherits from base class
+        port (int): camera serial port
+        channel (str): red, gree, blue, mono
+        res (tuple): resolution (rows, columns)
+    """
+    def __init__(self, port, channel, res) -> None:
+        super(QObject, self).__init__()
+        self.port = port  # video port to use (typically 1 or 2)
+        self.channel = channel  # selecting RGB channels separately
+        self.res = res  # tuple (1280,720)
+        # self.binning_factor = bin_factor  # not implemented yet
+        self.accum = False  # accumulation of frames instead of averaging
+        self.rotate = False  # if the output array should be rotated by 90 deg
         self.initialize()
 
     def initialize(self):
-        """initialize cv2 video capture stream"""
+        """
+        Initialize cv2 video capture stream. This method
+        tries to force resolution of the receiving stream from
+        the known channel.
+        """
         self.capture = cv2.VideoCapture(
-            self.channel,
+            self.port,
             apiPreference=cv2.CAP_ANY,
             params=[
                 cv2.CAP_PROP_FRAME_WIDTH, self.res[0],
@@ -42,8 +59,10 @@ class Camera(QObject):
 
     def set_average(self, num):
         """
-        Set how many captures are averaged into
-        single frame
+        How many captures are averaged into a single frame.
+
+        Args:
+            num (int): Number of averages
         """
         self.average = num
 
@@ -52,44 +71,68 @@ class Camera(QObject):
 
     @pyqtSlot()
     def acquire(self):
-        """Acquire 3D matrix of the data to be averaged
-        into the single frame. In addition counts how
-        many times no data were retrieved from the camera.
         """
+        Acquire Frames in the shape of 3D Matrix
+        which gets averaged into single frame.
+
+        pyqtSlot of the acquire thread of the main GUI
+
+        In addition counts how many times no data were retrieved
+        from the camera.
+
+        Returns:
+            pyqtSignal:
+                tuple
+                    ndarray of averaged frames
+                    int of no data received count
+        """
+        # preallocation
         self.frame = np.zeros((self.average, self.res[1], self.res[0]),
                               dtype=np.dtype(np.int16))
         no_data_count = 0
+
         for i in range(self.average):
             ret, frame = self.capture.read()
+
+            # no data received from camera
             if not ret:
                 no_data_count += 1
                 continue
-                # raise RuntimeWarning
-            # convert to monochrome and save to self.frame
-            if self.col_ch == 3:
+
+            # monochrome option should be 0
+            if self.channel == 3:
                 self.frame[i, :] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            else:
-                # retrieving only one channel
-                self.frame[i, :] = frame[:, :, self.col_ch]
+            else:  # retrieve only one channel in case of RGB camera
+                self.frame[i, :] = frame[:, :, self.channel]
         self.construct_data()
         self.data_ready.emit(self.data_avg, no_data_count)
         return
 
     def construct_data(self):
         """
-        sum or mean over the averaged frames, depending if the
-        shots are getting accumulated or averaged, respectively.
+        Construct data from the 3D array from
+        :fun:`~Camera.acquire`
+
+        Default is to average data and returns intX array
+        (depending on the camera dynamic range). If accumulation
+        is selected in the GUI, sum is applied over the acquired
+        ndarray. Therefore it can result in larger files.
         """
         if self.accum:
-            self.data_avg = np.rot90(np.sum(self.frame, axis=0))
+            self.data_avg = np.sum(self.frame, axis=0)
         else:
-            self.data_avg = np.rot90(np.mean(self.frame, axis=0))
+            self.data_avg = np.mean(self.frame, axis=0)
+
+        if self.rotate:
+            self.data_avg = np.rot90(self.data_avg)
+
     _exit = pyqtSignal()
 
     @pyqtSlot()
     def exit(self):
-        """ Try to release the capture port of
-        the camera
+        """
+        Release the capture port of the camera,
+        otherwise raise an exception
         """
         try:
             self.capture.release()
@@ -99,85 +142,130 @@ class Camera(QObject):
             return e
 
 
+class Dmk(QObject):
+    """Very basic USB camera which can work in
+    also with a cell phone via wifi.
+
+    Args:
+        QObject (_type_): Base class of the Qt.
+    """
+    def __init__(self, channel, col_ch, res, bin_factor) -> None:
+        super().__init__(channel, col_ch, res)
+
+
+class Basic_usb(Camera):
+    """Very basic USB camera which includes Sky basic or phonefix
+    cameras.
+
+    Args:
+        QObject (_type_): Base class of the Qt.
+        port (int): camera serial port
+        channel (str): red, gree, blue, mono
+        res (tuple): resolution (rows, columns)
+    """
+    def __init__(self, port, channel, res) -> None:
+        super().__init__(port, channel, res)
+
+
 class Phonefix(Camera):
+    """
+    Phonefix HDMI/VGA camera type. For this camera,
+    acquisition card is needed, such as capture cards for PC
+    gaming.
+
+    Args:
+        Camera (QObject): parent class with all the main camera
+        functionality
+    """
     def __init__(self, channel, col_ch, res):
         # super(self).__init__()
         super().__init__(channel, col_ch, res)
+
+    # if any methods need to be redefined, do it here
 
 
 # TODO need to implement camera shutdown
 # TODO if it can do hardware binning, implement it, otherwise only software one
 # TODO no software binning yet
+
+# TODO: refactor as a child of Camera class
 class Sky_basic(QObject):
-    def __init__(self, channel, col_ch, resolution, bin_factor) -> None:
-        super(QObject, self).__init__()
-        self.channel = channel  # which video input to use (typically 1 or 2)
-        self.res = resolution  # tuple (1280,720)
-        self.binning_factor = bin_factor  # not sure it can do hardware binning
-        self.accum = False
-        self.col_ch = col_ch
-        self.initialize()
+    """Very basic USB camera which can work in
+    also with a cell phone via wifi.
 
-    def initialize(self):
-        """initialize cv2 video capture stream"""
-        self.capture = cv2.VideoCapture(1)
+    Args:
+        QObject (_type_): Base class of the Qt.
+    """
+    def __init__(self, channel, col_ch, res, bin_factor) -> None:
+        super().__init__(channel, col_ch, res)
+    #     super(QObject, self).__init__()  # init of the parent class
+    #     self.channel = channel  # video port to use (typically 1 or 2)
+    #     self.res = resolution  # tuple (1280,720)
+    #     self.binning_factor = bin_factor  # not implemented yet
+    #     self.accum = False  # accumulation of frames instead of averaging
+    #     self.col_ch = col_ch  # selecting RGB channels separately
+    #     self.initialize()
 
-    def set_average(self, num):
-        """Set how many captures are averaged into
-        single frame
-        """
-        self.average = num
+    # def initialize(self):
+    #     """initialize cv2 video capture stream"""
+    #     self.capture = cv2.VideoCapture(self.channel)
 
-    start_acquire = pyqtSignal()
-    data_ready = pyqtSignal(np.ndarray, int)
+    # def set_average(self, num):
+    #     """Set how many captures are averaged into
+    #     single frame
+    #     """
+    #     self.average = num
 
-    @pyqtSlot()
-    def acquire(self):
-        """Acquire 3D matrix of the data to be averaged
-        into the single frame. In addition counts how
-        many times no data were retrieved from the camera.
-        """
-        self.frame = np.zeros((self.average, self.res[1], self.res[0]),
-                              dtype=np.dtype(np.int16))
-        no_data_count = 0
-        for i in range(self.average):
-            ret, frame = self.capture.read()
-            if not ret:
-                no_data_count += 1
-                continue
-                # raise RuntimeWarning
-            # convert to monochrome and save to self.frame
-            if self.col_ch == 3:
-                self.frame[i, :] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            else:
-                # retrieving only one channel
-                self.frame[i, :] = frame[:, :, self.col_ch]
-        self.construct_data()
-        self.data_ready.emit(self.data_avg, no_data_count)
-        return
+    # start_acquire = pyqtSignal()
+    # data_ready = pyqtSignal(np.ndarray, int)
 
-    def construct_data(self):
-        """
-        sum or mean over the averaged frames, depending if the
-        shots are getting accumulated or averaged, respectively.
-        """
-        if self.accum:
-            self.data_avg = np.rot90(np.sum(self.frame, axis=0))
-        else:
-            self.data_avg = np.rot90(np.mean(self.frame, axis=0))
-    _exit = pyqtSignal()
+    # @pyqtSlot()
+    # def acquire(self):
+    #     """Acquire 3D matrix of the data to be averaged
+    #     into the single frame. In addition counts how
+    #     many times no data were retrieved from the camera.
+    #     """
+    #     self.frame = np.zeros((self.average, self.res[1], self.res[0]),
+    #                           dtype=np.dtype(np.int16))
+    #     no_data_count = 0
+    #     for i in range(self.average):
+    #         ret, frame = self.capture.read()
+    #         if not ret:
+    #             no_data_count += 1
+    #             continue
+    #             # raise RuntimeWarning
+    #         # convert to monochrome and save to self.frame
+    #         if self.col_ch == 3:
+    #             self.frame[i, :] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    #         else:
+    #             # retrieving only one channel
+    #             self.frame[i, :] = frame[:, :, self.col_ch]
+    #     self.construct_data()
+    #     self.data_ready.emit(self.data_avg, no_data_count)
+    #     return
 
-    @pyqtSlot()
-    def exit(self):
-        """ Try to release the capture port of
-        the camera
-        """
-        try:
-            self.capture.release()
-            time.sleep(0.5)
-        except Exception as e:
-            print(f'Camera closing problem: {e}')
-            return e
+    # def construct_data(self):
+    #     """
+    #     sum or mean over the averaged frames, depending if the
+    #     shots are getting accumulated or averaged, respectively.
+    #     """
+    #     if self.accum:
+    #         self.data_avg = np.rot90(np.sum(self.frame, axis=0))
+    #     else:
+    #         self.data_avg = np.rot90(np.mean(self.frame, axis=0))
+    # _exit = pyqtSignal()
+
+    # @pyqtSlot()
+    # def exit(self):
+    #     """ Try to release the capture port of
+    #     the camera
+    #     """
+    #     try:
+    #         self.capture.release()
+    #         time.sleep(0.5)
+    #     except Exception as e:
+    #         print(f'Camera closing problem: {e}')
+    #         return e
 
 
 class Virtual(QObject):

@@ -1,7 +1,7 @@
-OPTac
-=====
+Motor class
+===========
 
 .. autosummary::
    :toctree: generated
 
-   optac_main
+   motor_class

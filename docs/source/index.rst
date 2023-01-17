@@ -5,14 +5,18 @@
 
 Welcome to OPTac's documentation!
 =================================
-.. automodule:: optac_main
-    :members:
+.. .. automodule:: optac_main
+..     :members:
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   app
+   optac_main
+   hardware
+   opt_class
+   camera_class
+   motor_class
 
 
 

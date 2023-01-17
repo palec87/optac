@@ -1,7 +1,7 @@
-OPTac
-=====
+OPT class
+=========
 
 .. autosummary::
    :toctree: generated
 
-   optac_main
+   opt_class

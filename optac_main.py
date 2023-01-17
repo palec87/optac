@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-
-'''
-OPTac gui
-
+"""
 Acquisition software for Optical Projection Tomography. If you are
-interested in reconstruction and analysis, see
+interested in reconstruction and analysis, see project \
+`OPTan <https://github.com/palec87/optan>`_.
 
 You can start cheap with the OPT with this GUI. 28BYJ-48 stepper motor and
 Sky basics camera cost 2.44 and 40 bucks, respectively.
@@ -17,7 +15,7 @@ TODO Save images into a check radio button
 
 Small motor which comes with Arduino starting kit (28BYJ-48) is
 denoted as Uno-stepper
-'''
+"""
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
@@ -36,7 +34,7 @@ import pyqtgraph as pg
 
 from motor_class import Stepper
 from camera_class import Sky_basic, Virtual, Phonefix
-from frame_processing import Frame
+from opt_class import Data
 from radon_back_projection import Radon
 
 from exceptions import NoMotorInitialized
@@ -107,7 +105,7 @@ class Gui(QtWidgets.QMainWindow):
             ['virtual', 'Sky (1280x720)', 'Phonefix'],
             )
         self.ui.camera_port.valueChanged.connect(self._update_camera_port)
-        self.ui.flat_field_btn.clicked.connect(self.exec_flat_field_btn)
+        self.ui.flat_field_btn.clicked.connect(self.exec_dark_field_btn)
 
         self.ui.red_ch.toggled.connect(self._update_camera_channels)
         self.ui.green_ch.toggled.connect(self._update_camera_channels)
@@ -137,8 +135,8 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.min_hist.valueChanged.connect(self._update_hist_min)
         self.ui.max_hist.valueChanged.connect(self._update_hist_max)
 
-        self.frame_count_set(self.frame_count)
-        self.no_data_count_set(self.no_data_count)
+        self._frame_count_set(self.frame_count)
+        self._no_data_count_set(self.no_data_count)
         self.ui.amp_ch.setChecked(True)
 
         self.ui.frame_rate.setDisabled(True)
@@ -155,6 +153,13 @@ class Gui(QtWidgets.QMainWindow):
         self._recheck_values()
 
     def _recheck_values(self):
+        """
+        In case loaded value is the same as
+        the default value from the gui, the updata
+        methods are not called and attributes not initiated.
+
+        This is a workaround method which could be imporved.
+        """
         self.motor_speed = self.ui.motor_speed.value()
         self.angle = self.ui.angle.value()
         self.motor_steps = self.ui.motor_steps.value()
@@ -173,7 +178,10 @@ class Gui(QtWidgets.QMainWindow):
         self.main_folder = self.ui.folder_path.toPlainText()
 
     def _load_gui_values(self, d):
-        print('reading values')
+        """
+        Load gui values if lif.json file exists.
+        """
+        self.append_history('Loading last instance values')
         self.ui.motor_speed.setValue(d['motor_speed'])
         self.ui.angle.setValue(d['angle'])
         self.ui.motor_steps.setValue(d['motor_steps'])
@@ -193,6 +201,10 @@ class Gui(QtWidgets.QMainWindow):
         self._update_folder_path()
 
     def _save_gui_values(self):
+        """
+        Save last used values from the GUI into an
+        lif.json file
+        """
         vals = {}
         vals['motor_speed'] = self.motor_speed
         vals['angle'] = self.angle
@@ -214,6 +226,10 @@ class Gui(QtWidgets.QMainWindow):
             f.write(json.dumps(vals))
 
     def _no_init_values(self):
+        """
+        In case of no lif.json file, fill the
+        default values
+        """
         self.ui.motor_speed.setValue(500)
         self.ui.angle.setValue(400)
         self.ui.motor_steps.setValue(4)
@@ -233,24 +249,34 @@ class Gui(QtWidgets.QMainWindow):
         self._update_folder_path()
 
     def _update_camera_port(self):
-        """Updates camera port form UI, TODO Does user need to know?.
+        """
+        Update camera port from the GUI,
+        TODO Option for user to identify her camera
         """
         self.camera_port = self.ui.camera_port.value()
 
     def _update_hist_min(self):
-        """Set minimum level for main image histogram from UI
+        """
+        Set minimum level for main image histogram
+        from GUI
         """
         self.min_hist = self.ui.min_hist.value()
         self._check_hist_vals()
 
     def _update_hist_max(self):
-        """Set maximum level for main image histogram from UI
+        """
+        Set maximum level for main image
+        histogram from GUI
         """
         self.max_hist = self.ui.max_hist.value()
         self._check_hist_vals()
 
     def _check_hist_vals(self):
-        '''check if min hist is lower than hist max'''
+        """
+        Check if min hist is lower than hist max
+        Raise error message and set the min/max below or above
+        respectively
+        """
         if self.max_hist is None or self.min_hist is None:
             return
         if self.ui.max_hist.value() <= self.ui.min_hist.value():
@@ -258,31 +284,41 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.max_hist.setValue(self.min_hist+1)
 
     def _update_toggle_hist(self):
-        """Use histogram min/max levels if toggled"""
+        """
+        Use histogram min/max levels for the main images
+        intensity range if toggled
+        """
         self.toggle_hist = self.ui.toggle_hist.isChecked()
 
     def _update_folder_path(self):
-        """Update saving folder path from UI"""
+        """
+        Update saving folder path from GUI
+        """
         self.ui.folder_path.setText(self.main_folder)
 
     def _update_radon_idx(self):
-        """Which horizontal line of the main graph
-        will be reconstructed, update input from UI.
+        """
+        Which horizontal line (index) of the main image
+        will be reconstructed.
+
+        Updated from the GUI.
         """
         self.radon_idx = self.ui.radon_idx.value()
 
     def _update_live_recon_btn(self):
-        """If UI button checked, live reconstruction is active
+        """
+        If GUI button checked, live reconstruction is active
         during the experiment.
         """
         self.live_recon = self.ui.live_recon.isChecked()
 
     def _update_camera_channels(self, checked):
-        """Checks which camera channel is selected
-        in the UI.
+        """
+        Checks which camera channel is selected
+        in the GUI.
 
         Args:
-            checked (bool): ischecked button
+            checked (bool): True value for a checked button
         """
         if checked:
             return
@@ -301,11 +337,16 @@ class Gui(QtWidgets.QMainWindow):
 
         if self.camera_on:
             self.camera.col_ch = self.channel
+        print(self.channel)
         return
 
     def _update_accum_shots(self):
-        """If checked, shots are getting accumulated and not
+        """
+        If checked, shots are getting accumulated and not
         averaged. Effect is immediate if acquiring.
+
+        Careful with the output data size, because frames do
+        not fit into jpg format any more.
         """
         self.accum_shots = self.ui.accum_shots.isChecked()
         if self.camera_on:
@@ -316,30 +357,43 @@ class Gui(QtWidgets.QMainWindow):
             self.camera.accum = self.ui.accum_shots.isChecked()
 
     def _update_motor_steps(self):
-        """Update number of motor steps per revolution from UI
+        """
+        Update number of motor steps per move (step)
+        from GUI
         """
         self.motor_steps = self.ui.motor_steps.value()
 
     def _update_n_sweeps(self):
-        """update number of sweeps, repetitions of the
-        single OPT scan
+        """
+        Update number of sweeps, i.e. repetitions of the
+        one revolution OPT scan
         """
         self.n_sweeps = self.ui.n_sweeps.value()
 
     def _update_n_frames(self):
-        """Update from UI how many frames to aquire
+        """
+        Update from GUI how many frames to aquire per
+        step of the OPT experiment or with a live acquisition
+        mode.
+
         Does not take into account averaging per frame.
         """
         self.n_frames = self.ui.n_frames.value()
 
     def _update_camera_type(self):
-        """Update camera type from UI
+        """
+        Update camera type from GUI
+        TODO: initialization of the camera to be triggered by
+        separate button
         """
         self.camera_type = self.ui.camera_type_list.currentIndex()
         # self.initialize_camera()
 
     def _update_motor_type(self):
-        """Update motor type from the UI"""
+        """
+        Update motor type from the dropdown menu
+        in the GUI
+        """
         self.motor_type = self.ui.motor_type_list.currentIndex()
         if self.motor_type == 0:
             self.motor = 'Uno-stepper'
@@ -347,35 +401,63 @@ class Gui(QtWidgets.QMainWindow):
             raise ValueError
 
     def _update_frame_rate(self):
-        """Update frame rate from the UI
+        """
+        Update frame rate from the GUI. Not available
+        for the cheap cameras
         """
         self.frame_rate = self.ui.frame_rate.value()
 
     def _update_frames_to_avg(self):
-        """Number of frames to average per single image"""
+        """
+        Number of frames to average into a single frame
+        """
         self.frames_to_avg = self.ui.frames2avg.value()
 
     def _update_motor_speed(self):
-        """Update motor speed from the UI"""
+        """
+        Update motor speed from the GUI
+        """
         self.motor_speed = self.ui.motor_speed.value()
         if self.motor_on:
             self.stepper.speed = self.motor_speed
 
     def _update_motor_angle(self):
-        """Update motor angle to turn in stepping mode
-        For Uno-stepper, 2048 is a full turn"""
+        """
+        Update motor angle to turn in stepping mode
+        For Uno-stepper.
+
+        2048 steps signify a full turn.
+        """
         self.angle = self.ui.angle.value()
 
     def _update_metadata_expr(self):
-        """ update metadate from the UI text box"""
+        """
+        Update metadata from the UI text box.
+        TODO: Make sure parsing works for various inputs
+        """
         self.metadata['exp_notes'] = self.ui.expr_metadata.toPlainText()
 
     ###################
     # execute buttons #
     ###################
-    def exec_flat_field_btn(self):
-        """integrate dark counts for 50x exposure time
-        - flat field is rounded to int, for saving
+    def exec_dark_field_btn(self):
+        """
+        Clicking the button triggers process of
+        dark-field correction.
+
+        1. Display message to block the camera.
+        2. Check if camera already on, if not, try to initialize.
+        3. Call acquire_dark_field method.
+        4. Return array into dark_field attribute.
+        5. Save the dark-field into a file.
+
+        Acquire does 50x times current exposure time exposure.
+
+        TODO: Once the exposure time changes, multiple of dark
+        counts need to be subtracted.
+
+        TODO: Once the exposure time changes, notify user to acquire
+        new dark field.
         """
         # pop message to block the camera
         self.message_block()
@@ -384,26 +466,43 @@ class Gui(QtWidgets.QMainWindow):
         if not self.camera_on:
             self.initialize_camera()
 
-        # acquire dataset
-        self.acquire_flat_field()
+        # acquire data
+        self.acquire_dark_field()
         self.flat_field = self.current_frame.frame
-        self.save_image('flat_field')
+        self.save_image('dark_field')
 
-    def acquire_flat_field(self):
+    def acquire_dark_field(self):
+        """
+        Actual dark-field acquisition
+
+        1. Define camera.set_average to current * 50
+        2. Call start_acquire
+        """
         self.camera.set_average(self.frames_to_avg * 50)
         # mes = self.message_flat_field_acq()
         self.camera.start_acquire.emit()
         # mes.close()
 
-        self.append_history('')
+        self.append_history('Dark-field done')
 
     def linearity_calibration(self):
-        """load calibration file, doing it alone is tedious,
+        """
+        Load calibration file, doing it alone is tedious,
         can be suggested to user
+
+        TODO: This should be done once, saved and know
+        for each camera what is the linear range.
         """
         return
 
     def exec_motor_init_btn(self):
+        """
+        Initialize stepper motor. Raise errors
+        if failed. If successful, set motor_on to True.
+
+        1. 'Initialize' button disable.
+        2. 'Close motor' button enable.
+        """
         try:
             self.initialize_stepper()
         except NoMotorInitialized:
@@ -417,10 +516,21 @@ class Gui(QtWidgets.QMainWindow):
             self.append_history('motor ready.')
 
     def initialize_camera(self):
+        """
+        Initialize camera.
+        TODO: try to force resolution of the low-end
+        cameras
+
+        In case some camera is already initialized, the
+        thread will be killed and re-initialized again.
+        """
         self.append_history('Initializing camera')
+
+        # if camera on, quit current thread
         if self.camera_on:
             self.acquire_thread.quit()
 
+        # initialize
         if self.camera_type == 0:
             # virtual
             self.initialize_virtual_camera()
@@ -438,6 +548,7 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.motor_steps.setEnabled(True)
 
         self.camera_on = True
+        # create and connect camera.acquire thread
         self.acquire_thread = QtCore.QThread(parent=self)
         self.acquire_thread.start()
         self.camera.moveToThread(self.acquire_thread)
@@ -445,6 +556,10 @@ class Gui(QtWidgets.QMainWindow):
         self.camera.data_ready.connect(self.post_acquire)
 
     def initialize_sky_basic(self):
+        """
+        Initialize Sky basic camera on a given
+        port, color channel and resolution.
+        """
         self.simul_mode = False
         self.camera = Sky_basic(
                             channel=self.camera_port,
@@ -454,6 +569,10 @@ class Gui(QtWidgets.QMainWindow):
                             )
 
     def initialize_phonefix(self):
+        """
+        Initialize the phonefix camera on a given
+        port, color channel and resolution.
+        """
         self.simul_mode = False
         self.append_history('this camera can take longer to INIT')
         self.camera = Phonefix(
@@ -463,14 +582,29 @@ class Gui(QtWidgets.QMainWindow):
                             )
 
     def initialize_virtual_camera(self):
+        """
+        Initialize virtual camera, which requires generating
+        sinogram from the 3D shepp phantom data.
+
+        TODO: This takes time and causes crashes of the tests
+        on the github actions. Therefore will be triggered by
+        camera initialize button.
+        """
         print('initializing virtual camera')
         self.simul_mode = True
         self.append_history(str(self.simul_mode))
         self.camera = Virtual(self.simul_angles)
 
     def exec_get_n_frames_btn(self):
-        self.frame_count_set(0)
-        self.no_data_count_set(0)
+        """
+        Button triggers acquisition of self.n_frames
+        frames, each averaged or accumulated.
+
+        In case of OPT acquisition, all these frames
+        will be saved at each angle (motor step).
+        """
+        self._frame_count_set(0)
+        self._no_data_count_set(0)
 
         # camera init
         if not self.camera_on:
@@ -479,12 +613,23 @@ class Gui(QtWidgets.QMainWindow):
         self.acquire()
 
     def _check_motors(self):
+        """
+        Checking the stepper motor before the OPT acquisition
+        starts.
+
+        1. Set step count to 0, and unit of progress for \
+            sweep progress bar.
+        2. In case of virtual camera, exit method.
+        3. Initialize motor, if not already.
+        """
         self.unit_of_progress = 100/self.motor_steps
         self.step_count = 0
 
+        # for virtual camera, no need for a motor
         if self.simul_mode:
             return
 
+        # if not initialized, do it here
         if not self.motor_on:
             self.initialize_stepper()
 
@@ -494,6 +639,14 @@ class Gui(QtWidgets.QMainWindow):
         self.append_history(f'ANGLE: {self.angle}')
 
     def exec_run_opt_btn(self):
+        """
+        Triggers OPT execution.
+
+        1. Creates saving folder.
+        2. Disable buttons.
+        3. Check motor, collect metadata
+        4. Call :fun:`Gui.run_sweep`_.
+        """
         self.create_saving_folder()
         self.disable_btns()
         self.save_images = True
@@ -510,6 +663,12 @@ class Gui(QtWidgets.QMainWindow):
         self.run_sweep()
 
     def exec_motor_close_btn(self):
+        """
+        Close the stepper by shutting down the
+        arduino board connection.
+
+        Disable/enable motor initiation buttons.
+        """
         try:
             self.stepper.shutdown()
         except Exception as e:
@@ -519,6 +678,12 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.motor_close_btn.setDisabled(True)
 
     def exec_step_motor_btn(self):
+        """
+        Move a stepper motor with self.speed and by
+        self.angle.
+
+        In simul mode (virtual camera), nothing will happen.
+        """
         if self.simul_mode:
             self.append_history('simul mode, no rotation enabled')
             return
@@ -526,14 +691,20 @@ class Gui(QtWidgets.QMainWindow):
         self.stepper.move_relative(self.angle)
 
     def exec_rotate_motor_btn(self):
-        '''
-        continuous rotation
-        - For this I need to fix the parallel threding
+        """
+        Continuous rotation of a motor. NotImplemented now.
+
+        TODO: Necessary to fix the parallel threding
         to be able to acquire while rotating.
-        '''
+        """
         pass
 
     def select_folder(self):
+        """
+        Opens a folder selection dialog to choose
+        data saving folder. Folder path also displayed in
+        the textbox.
+        """
         folder = str(QtWidgets.QFileDialog.getExistingDirectory(
                                 self, "Select Directory"))
         if not folder:
@@ -541,11 +712,14 @@ class Gui(QtWidgets.QMainWindow):
             return
 
         self.main_folder = folder
-        self._update_folder_path()
+        self._update_folder_path()  # sets path to textbox
         self.append_history('new data folder selected')
 
     def exec_stop_btn(self):
-        '''stops acquisition from running'''
+        """
+        Stops acquisition, close camera, acquire and
+        motor threads.
+        """
         self.append_history('Stopped')
         self.stop_request = True
         try:
@@ -558,10 +732,10 @@ class Gui(QtWidgets.QMainWindow):
             self.motor_thread.quit()
 
     def exec_exit_btn(self):
-        '''
-        will exit from gui. some safeguarding
-         in case exit is called before stop
-         '''
+        """
+        Exit GUI including safeguarding
+        in case exit is called before stop.
+        """
         self.append_history('Stopped')
 
         if self.idle is False:
@@ -574,6 +748,12 @@ class Gui(QtWidgets.QMainWindow):
     # Initialize HW #
     #################
     def initialize_stepper(self):
+        """Initialize a stepper motor.
+
+        1. Create motor thread.
+        2. Initialize or raise exception.
+        3. Move the stepper to the thread.
+        """
         self.motor_thread = QtCore.QThread(parent=self)
         self.motor_thread.start()
         try:
@@ -586,18 +766,38 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.motor_init_btn.setDisabled(False)
         self.stepper.moveToThread(self.motor_thread)
 
-    def frame_count_set(self, count):
-        '''update frame count in the current run'''
+    ############
+    # Counters #
+    ############
+    def _frame_count_set(self, count):
+        """
+        Update frame count in the current
+        acquisition run. Frame count is dispalyed
+        in the QLCD GUI object.
+
+        Args:
+            count (int): Frame number
+        """
         self.frame_count = count
         self.ui.frame_count.display(self.frame_count)
 
-    def no_data_count_set(self, count):
-        '''update frame count in the current run'''
+    def _no_data_count_set(self, count):
+        """
+        Update count of frames which has not been received
+        form the camera in the current run.
+
+        NO data count displayed in the QLCD GUI object.
+
+        Args:
+            count (int): Number of NO data frames.
+        """
         self.no_data_count = count
         self.ui.no_data_count.display(self.no_data_count)
 
     def sweep_count_set(self, count):
-        """update sweep count during OPT acquisition
+        """
+        Update sweep count during OPT acquisition.
+        Count displayed in QLCD display in the GUI.
 
         Args:
             count (int): sweep number
@@ -606,21 +806,33 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.sweep_count.display(self.sweep_count)
 
     def disable_btns(self):
+        """
+        Disable buttons during the OPT acquisition.
+
+        TODO: if acquisition raises errors, GUI needs to go
+        to a default state.
+        """
         self.ui.stepper_box.setDisabled(True)
         self.ui.camera_box.setDisabled(True)
         self.ui.acquire_settings_box.setDisabled(True)
         self.ui.measure_box.setDisabled(True)
 
     def enable_btns(self):
+        """
+        Enable buttons after the OPT experiment is over.
+        """
         self.ui.stepper_box.setDisabled(False)
         self.ui.camera_box.setDisabled(False)
         self.ui.acquire_settings_box.setDisabled(False)
         self.ui.measure_box.setDisabled(False)
 
     def post_sweep(self):
-        """Register time of sweep finish.
-        If last sweep, close experiment with post_opt()
-        If not, run next sweep.
+        """
+        Processing after a sweep is finished.
+
+        1. Register time of sweep finish, add to metadata.
+        2. If last sweep, close experiment with post_opt()
+        3. Otherwise go to next sweep via run_sweep()
         """
         self.metadata['sweep_finish'].append(self.get_time_now())
         self.sweep_count_set(self.sweep_count + 1)
@@ -631,10 +843,21 @@ class Gui(QtWidgets.QMainWindow):
             self.run_sweep()
 
     def clear_sweep_data(self):
+        """
+        Clear sweep data before the next swepp
+        start.
+
+        TODO: clear also a reconstruction image.
+        """
         self.current_frame = None
         self.step_count = 0
 
     def collect_metadata(self):
+        """
+        Collect metadata, N steps, N sweep,
+        averages per frame, frames per steps,
+        camera dynamic range, experiment notes.
+        """
         self.metadata['n_steps'] = self.motor_steps
         self.metadata['n_sweeps'] = self.n_sweeps
         self.metadata['avg_per_frame'] = self.frames_to_avg
@@ -645,20 +868,31 @@ class Gui(QtWidgets.QMainWindow):
         self.metadata['user notes'] = self.ui.expr_metadata.toPlainText()
 
     def save_metadata(self):
-        """Saving metadata dictionary in json format
+        """
+        Saving metadata dictionary in json format into the
+        data saving folder.
         """
         file_path = os.path.join(self.exp_path, 'metadata.txt')
         with open(file_path, 'w') as f:
             f.write(json.dumps(self.metadata))
 
     def run_sweep(self):
+        """
+        Calls get_n_frames()
+        TODO: split exec_btn and get_n_frames
+        """
         self.append_history(f'STEP {self.step_count}')
         self.exec_get_n_frames_btn()
 
     def save_image(self, fname=None):
-        """Saving frames as images or text files in case accum shots
-        is selected, which results in float numbers. Default file name
-        is sweep_step_frame numbers separated by '_'.
+        """
+        Saving frames as images or text files (in case accum shots
+        is selected), which results in float numbers.
+
+        1. Create filename. Default file name is sweep_step_frame \
+        numbers separated by '_'.
+        2. If saving folder does not exist, create it.
+        3. If/else for averaging vs accumulation of the frames modes.
 
         Args:
             fname (str, optional): file name, used in cases of
@@ -682,7 +916,14 @@ class Gui(QtWidgets.QMainWindow):
     # Acquisition #
     ###############
     def acquire(self):
-        '''acquire data from camera'''
+        """
+        Acquire data from camera
+        1. Set how much averaging to do for single frames
+        2.
+        3. Emit start_acquire thread data
+
+        TODO: Get rid of camera.idx part.
+        """
         self.camera.set_average(self.frames_to_avg)
         # only needed for the virtual camera
         if self.opt_running:
@@ -692,11 +933,23 @@ class Gui(QtWidgets.QMainWindow):
         self.camera.start_acquire.emit()
 
     def post_acquire(self, frame, no_frame_count):
+        """Data handling after receiving data form the camera.
+        1. Update current frame attribute
+        2. Update plots
+        3. Check stop request, save data
+        4. Update frame count.
+        5. If all frames form current step done, move to \
+        the next step. Otherwise, acquire again.
+
+        Args:
+            frame (ndarray): Averaged current frame.
+            no_frame_count (int): No data received count.
+        """
         try:
             self.current_frame.update_frame(frame, no_frame_count)
         except AttributeError:
             print('current_frame does not exist, creating a new one.')
-            self.current_frame = Frame(frame, no_frame_count)
+            self.current_frame = Data(frame, no_frame_count)
 
         self.current_frame_plot()
 
@@ -708,7 +961,7 @@ class Gui(QtWidgets.QMainWindow):
         if self.save_images:
             self.save_image()
 
-        self.frame_count_set(self.frame_count+1)
+        self._frame_count_set(self.frame_count+1)
 
         # checking for end of current step
         if self.frame_count >= self.n_frames:
@@ -720,6 +973,12 @@ class Gui(QtWidgets.QMainWindow):
             self.acquire()
 
     def post_step(self):
+        """After all frames of the current step are processed,
+        update progress bar, update reconstruction plot
+        2. If last step of the sweep -> post_sweep()
+        3. Otherwise step motor and acquire data again \
+        by calling run_sweep method.
+        """
         self.ui.progressBar.setValue(
                 int((self.step_count+1)*self.unit_of_progress))
         if self.live_recon:
@@ -734,6 +993,13 @@ class Gui(QtWidgets.QMainWindow):
             self.run_sweep()
 
     def post_opt(self):
+        """Steps after OPT experiment acquisition finished.
+
+        1. Save metadata.
+        2. Enable buttons.
+        3. Clear sweep data.
+        4. Go to idling() state.
+        """
         self.save_metadata()
         self.enable_btns()
         self.save_images = False
@@ -745,12 +1011,32 @@ class Gui(QtWidgets.QMainWindow):
     # Metadata, saving, reporting #
     ###############################
     def get_date_now(self):
+        """Get current date and time which is
+        used for the experimental metadata information
+
+        Returns:
+            str: datetime from years to seconds
+        """
         return strftime("%y%m%d-%H-%M-%S", gmtime())
 
     def get_time_now(self):
+        """Get current time string, used for experimental
+        metadata information.
+
+        Returns:
+            str: time H-M-S
+        """
         return strftime('%H-%M-%S +0000', gmtime())
 
     def create_saving_folder(self):
+        """Create experiment saving folder in the data saving folder
+        selected by user in the GUI. Method updates path attribute.
+        Name of the folder is a datetime string.
+
+        1. Create the folder and report in the history tab
+
+        Folder name is not optional and has unified format.
+        """
         self.exp_path = os.path.join(self.main_folder,
                                      self.get_date_now(),
                                      )
@@ -758,13 +1044,24 @@ class Gui(QtWidgets.QMainWindow):
         self.append_history(f'created dir: {self.exp_path}')
 
     def append_history(self, message):
+        """Append history tab with runtime messages to user
+
+        Args:
+            message (str): Message as a single string.
+        """
         self.ui.history.appendPlainText(message)
 
     ############
     # Plotting #
     ############
     def update_recon(self):
-        # new version with catching exception
+        """
+        Update Radon reconstruction after OPT step is finished.
+        Handles if the reconstruction index is too high.
+
+        TODO: handle that exception better. Experiment should continue
+        without reconstruction
+        """
         try:
             self.current_recon.update_recon(
                 self.current_frame.frame[self.radon_idx, :],
@@ -782,7 +1079,13 @@ class Gui(QtWidgets.QMainWindow):
                 self.post_opt()
 
     def create_plots(self):
-        '''defines defaults for each graph'''
+        """
+        Creates plots during the GUI initialization processes
+        And defines defaults for each graph
+
+        1. Camera image plot is a pyqtgraph histogram widget
+        2. Reconstruction plot is a pyqtgraph plotItem
+        """
         self.hist = self.ui.camera_live.getHistogramWidget()
         self.hist.fillHistogram(color=(255, 0, 0))
 
@@ -792,7 +1095,9 @@ class Gui(QtWidgets.QMainWindow):
         )
 
     def current_frame_plot(self):
-        '''last frame plot in Align tab'''
+        """
+        Update current frame plot. Or raise exception.
+        """
         try:
             # this notworks
             # plot = pg.PlotItem()
@@ -815,7 +1120,9 @@ class Gui(QtWidgets.QMainWindow):
         return
 
     def current_recon_plot(self):
-        '''last frame plot in Align tab'''
+        """
+        Update reconstruction image based on the current last frame.
+        """
         try:
             img = pg.ImageItem(image=self.current_recon.output)
             self.ui.recon_live.plotItem.addItem(
@@ -831,11 +1138,18 @@ class Gui(QtWidgets.QMainWindow):
     # State functions #
     ###################
     def idling(self):
+        """
+        Idle state
+        """
         self.idle = True
         # self.acquire_thread.terminate()
         # self.acquire_thread.quit()
 
     def finish(self):
+        """
+        First idle state and then quit threads, both
+        stepper, camera and acquire threads.
+        """
         self.idling()
         self.acquire_thread.quit()
         if self.motor_on:
@@ -851,6 +1165,14 @@ class Gui(QtWidgets.QMainWindow):
     # Messages #
     ############
     def message_init_motor(self):
+        """
+        Display message box with a notice to
+        initialize motor first before starting OPT and
+        other.
+
+        Returns:
+            int: system execution status.
+        """
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setText("Initialize motor first")
@@ -860,6 +1182,14 @@ class Gui(QtWidgets.QMainWindow):
         return retval
 
     def message_hist_error(self):
+        """
+        Display message that histogram values do not
+        conform, min of histogram cannot be higher than max
+        of the histogram.
+
+        Returns:
+            int: sys execution status
+        """
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setText("'Min hist' value has to be lower than 'Max hist'")
@@ -869,10 +1199,12 @@ class Gui(QtWidgets.QMainWindow):
         return retval
 
     def message_block(self):
-        """before acquisition of the flat-field correction
+        """
+        Block comera message before acquisition of the dark-field
+        correction
 
         Returns:
-            bool:
+            int: sys execution status.
         """
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
@@ -883,6 +1215,12 @@ class Gui(QtWidgets.QMainWindow):
         return retval
 
     def message_unblock(self):
+        """Unblock the camera message after the dark-field
+        acquisition.
+
+        Returns:
+            int: sys execution status.
+        """
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setText("UnBlock Camera")
@@ -892,14 +1230,26 @@ class Gui(QtWidgets.QMainWindow):
         return retval
 
     def message_flat_field_acq(self):
+        """Display message while acquring dark-field.
+        Currently not used.
+
+        Returns:
+            int: sys execution status
+        """
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
-        msg.setText("Acquiring Flat-Field")
+        msg.setText("Acquiring Dark-Field")
         # retval = msg.exec_()
         return msg
 
 
 def main_GUI():
+    """Initiate Qt application and GUI. Display the GUI and
+    create plots.
+
+    Returns:
+        Tuple: QtApplication, GUI
+    """
     app = QtWidgets.QApplication(sys.argv)
     init_values_file = os.path.join(os.getcwd(), 'lif.json')
     gui = Gui(init_values_file=init_values_file)

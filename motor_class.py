@@ -13,7 +13,7 @@ import time
 from telemetrix import telemetrix
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from exceptions import NoMotorInitialized
+from optac.exceptions import NoMotorInitialized
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
