@@ -4,7 +4,7 @@
 
 import pytest
 from PyQt5 import QtCore
-from optac_main import main_GUI
+from main import main_GUI
 from PyQt5 import QtTest
 from pytestqt.plugin import QtBot
 from PyQt5.QtWidgets import (

@@ -5,4 +5,9 @@ class Error(Exception):
 
 class NoMotorInitialized(Error):
     """Raised when no motor found"""
-    print('Motor init failed')
+    print('Initilize motor first')
+
+
+class MotorInitFailed(Error):
+    """Raised when no motor found"""
+    print('Failure with init motor')

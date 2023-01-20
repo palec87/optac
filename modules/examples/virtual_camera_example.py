@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from optac.phantoms_argonne import shepp3d
+from optac.modules.phantoms_argonne import shepp3d
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -39,7 +39,7 @@ plt.clf()
 plt.ioff()
 
 # Display of the mean intensity projection
-mean_proj = np.meam(data, axis=2)
+mean_proj = np.mean(data, axis=2)
 plt.imshow(mean_proj, cmap=plt.cm.Greys_r)
 plt.colorbar()
 plt.show()

@@ -29,15 +29,19 @@ import json
 import numpy as np
 
 from PyQt5 import QtCore, QtWidgets
-from gui.optac_ui import Ui_MainWindow
+from modules.gui.optac_ui import Ui_MainWindow
 import pyqtgraph as pg
 
-from motor_class import Stepper
-from camera_class import Sky_basic, Virtual, Phonefix
-from opt_class import Data
-from radon_back_projection import Radon
+from modules.control.motor_class import Stepper
+from modules.control.camera_class import (
+    Sky_basic,
+    Virtual,
+    Phonefix,
+    DMK)
+from modules.control.opt_class import Data
+from modules.radon_back_projection import Radon
 
-from exceptions import NoMotorInitialized
+from modules.exceptions import NoMotorInitialized
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
@@ -97,15 +101,17 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.motor_type_list.addItem('Uno-stepper')
 
         # camera settings
-        self.ui.frame_rate.valueChanged.connect(self._update_frame_rate)
+        # self.ui.frame_rate.valueChanged.connect(self._update_frame_rate)
         self.ui.camera_type_list.currentIndexChanged.connect(
             self._update_camera_type
             )
         self.ui.camera_type_list.addItems(
-            ['virtual', 'Sky (1280x720)', 'Phonefix'],
+            ['virtual', 'Sky (1280x720)', 'Phonefix', 'DMK'],
             )
         self.ui.camera_port.valueChanged.connect(self._update_camera_port)
+        self.ui.camera_init_btn.clicked.connect(self.initialize_camera)
         self.ui.flat_field_btn.clicked.connect(self.exec_dark_field_btn)
+        self.ui.snap_dmk_btn.clicked.connect(self.snap_dmk)
 
         self.ui.red_ch.toggled.connect(self._update_camera_channels)
         self.ui.green_ch.toggled.connect(self._update_camera_channels)
@@ -139,7 +145,7 @@ class Gui(QtWidgets.QMainWindow):
         self._no_data_count_set(self.no_data_count)
         self.ui.amp_ch.setChecked(True)
 
-        self.ui.frame_rate.setDisabled(True)
+        # self.ui.frame_rate.setDisabled(True)
         self.ui.rotate_motor_btn.setDisabled(True)
 
         #  try loading last instance values
@@ -164,7 +170,7 @@ class Gui(QtWidgets.QMainWindow):
         self.angle = self.ui.angle.value()
         self.motor_steps = self.ui.motor_steps.value()
         self.n_sweeps = self.ui.n_sweeps.value()
-        self.frame_rate = self.ui.frame_rate.value()
+        # self.frame_rate = self.ui.frame_rate.value()
         self.camera_port = self.ui.camera_port.value()
         self.frames_to_avg = self.ui.frames2avg.value()
         self.n_frames = self.ui.n_frames.value()
@@ -186,7 +192,7 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.angle.setValue(d['angle'])
         self.ui.motor_steps.setValue(d['motor_steps'])
         self.ui.n_sweeps.setValue(d['n_sweeps'])
-        self.ui.frame_rate.setValue(d['frame_rate'])
+        # self.ui.frame_rate.setValue(d['frame_rate'])
         self.ui.camera_port.setValue(d['camera_port'])
         self.ui.frames2avg.setValue(d['frames_to_avg'])
         self.ui.n_frames.setValue(d['n_frames'])
@@ -210,7 +216,7 @@ class Gui(QtWidgets.QMainWindow):
         vals['angle'] = self.angle
         vals['motor_steps'] = self.motor_steps
         vals['n_sweeps'] = self.n_sweeps
-        vals['frame_rate'] = self.frame_rate
+        # vals['frame_rate'] = self.frame_rate
         vals['camera_port'] = self.camera_port
         vals['frames_to_avg'] = self.frames_to_avg
         vals['n_frames'] = self.n_frames
@@ -234,7 +240,7 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.angle.setValue(400)
         self.ui.motor_steps.setValue(4)
         self.ui.n_sweeps.setValue(1)
-        self.ui.frame_rate.setValue(24)
+        # self.ui.frame_rate.setValue(24)
         self.ui.camera_port.setValue(1)
         self.ui.frames2avg.setValue(10)
         self.ui.n_frames.setValue(10)
@@ -387,7 +393,6 @@ class Gui(QtWidgets.QMainWindow):
         separate button
         """
         self.camera_type = self.ui.camera_type_list.currentIndex()
-        # self.initialize_camera()
 
     def _update_motor_type(self):
         """
@@ -446,7 +451,7 @@ class Gui(QtWidgets.QMainWindow):
         dark-field correction.
 
         1. Display message to block the camera.
-        2. Check if camera already on, if not, try to initialize.
+        2. If comera on, show warning and return. 
         3. Call acquire_dark_field method.
         4. Return array into dark_field attribute.
         5. Save the dark-field into a file.
@@ -462,9 +467,10 @@ class Gui(QtWidgets.QMainWindow):
         # pop message to block the camera
         self.message_block()
 
-        # camera init
+        # check if camera on
         if not self.camera_on:
-            self.initialize_camera()
+            self.message_init_camera()
+            return
 
         # acquire data
         self.acquire_dark_field()
@@ -506,6 +512,7 @@ class Gui(QtWidgets.QMainWindow):
         try:
             self.initialize_stepper()
         except NoMotorInitialized:
+            print('here')
             self.append_history('No motor found.')
         except Exception as e:
             self.append_history(f'Motor problem, {e}.')
@@ -546,6 +553,8 @@ class Gui(QtWidgets.QMainWindow):
             self.resolution = (1920, 1080)
             self.initialize_phonefix()
             self.ui.motor_steps.setEnabled(True)
+        elif self.camera_type == 3:
+            self.initialize_dmk()
 
         self.camera_on = True
         # create and connect camera.acquire thread
@@ -554,6 +563,20 @@ class Gui(QtWidgets.QMainWindow):
         self.camera.moveToThread(self.acquire_thread)
         self.camera.start_acquire.connect(self.camera.acquire)
         self.camera.data_ready.connect(self.post_acquire)
+
+    def initialize_dmk(self):
+        self.simul_mode = False
+        self.camera = DMK("DMK 37BUX252")
+        wid = self.ui.camera_live.winId()
+        self.camera.startCamera(wid)
+        self.append_history('camera on')
+        self.camera_on = True
+
+    def snap_dmk(self):
+        if not self.camera_on:
+            self.message_init_camera()
+            return
+        self.camera.snap_image()
 
     def initialize_sky_basic(self):
         """
@@ -603,13 +626,12 @@ class Gui(QtWidgets.QMainWindow):
         In case of OPT acquisition, all these frames
         will be saved at each angle (motor step).
         """
+        # check camera
+        if not self.camera_on:
+            self.message_init_camera()
+            return
         self._frame_count_set(0)
         self._no_data_count_set(0)
-
-        # camera init
-        if not self.camera_on:
-            self.initialize_camera()
-
         self.acquire()
 
     def _check_motors(self):
@@ -631,7 +653,9 @@ class Gui(QtWidgets.QMainWindow):
 
         # if not initialized, do it here
         if not self.motor_on:
-            self.initialize_stepper()
+            self.message_init_motor()
+            print('here2')
+            raise NoMotorInitialized
 
         self.ui.angle.setValue(
             int(self.stepper.full_rotation / self.motor_steps)
@@ -1175,7 +1199,24 @@ class Gui(QtWidgets.QMainWindow):
         """
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
-        msg.setText("Initialize motor first")
+        msg.setText("Initialize MOTOR first")
+        msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        retval = msg.exec_()
+        print(retval)
+        return retval
+
+    def message_init_camera(self):
+        """
+        Display message box with a notice to
+        initialize camera before any acquisition of OPT or
+        other.
+
+        Returns:
+            int: system execution status.
+        """
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setText("Initialize CAMERA first.")
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
         retval = msg.exec_()
         print(retval)

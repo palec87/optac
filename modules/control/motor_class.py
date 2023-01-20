@@ -13,7 +13,7 @@ import time
 from telemetrix import telemetrix
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from .exceptions import NoMotorInitialized
+from optac.modules.exceptions import NoMotorInitialized, MotorInitFailed
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
@@ -40,7 +40,8 @@ class Stepper(QObject):
         # Can this be replaced by init_board()
         try:
             self.init_board()
-        except NoMotorInitialized:
+        except MotorInitFailed:
+            print('fuck')
             raise
 
         self.init_motor()
