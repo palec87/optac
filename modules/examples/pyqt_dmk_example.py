@@ -114,8 +114,6 @@ def SelectLeftDevice():
         startCamera(LeftUserData, LeftCamera)
         ic.IC_SaveDeviceStateToFile(LeftCamera, tis.T("left.xml"))
 
-    
-
 
 def ShowLeftProperties():
     global LeftCamera

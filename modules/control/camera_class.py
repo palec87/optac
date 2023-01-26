@@ -11,15 +11,18 @@ Virtual camera is a separate class.
 4. DMK 37BUX252
 """
 
+import os
 import numpy as np
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 import cv2
 from optac.modules.control.threading_class import Get_radon
 import time
 from ctypes import (
-    cdll, Structure, c_float, c_int, c_long, c_ubyte,
+    cdll, Structure, c_float, c_int, c_long, c_ubyte, c_uint,
     cast, POINTER
 )
+
+import xml.etree.ElementTree as ET
 
 import optac.modules.dll.tisgrabber as tis
 
@@ -49,20 +52,28 @@ class DMK(QObject):
         self.ic.IC_InitLibrary(0)
         self.name = name
         self.camera = None
+        self.saving = False
+        self.accum = False
+        self.rotate = False
 
-        self.vid_format = ''
+        self.format = None
         self.binning = 0
         self.skipping = 0
 
         self.counter = 0
-        self.exit()
+        # self.exit()
         self.select_camera()
 
     def select_camera(self):
-        self.create_grabber()
+        # self.create_grabber()
         self.camera = self.ic.IC_ShowDeviceSelectionDialog(None)
         print('saving xml')
-        self.ic.IC_SaveDeviceStateToFile(self.g, tis.T("device.xml"))
+        self.ic.IC_SaveDeviceStateToFile(self.camera, tis.T("device.xml"))
+
+        print('reading xml back to retrieve settings')
+        self.parse_camera_state_xml()
+
+        self.ic.IC_SetFormat(self.camera, c_uint(self.format))
 
         self.Callbackfunc = self.ic.FRAMEREADYCALLBACK(self.img_callback)
         self.data = CallbackUserdata()
@@ -72,11 +83,54 @@ class DMK(QObject):
             self.data,
             )
 
-        self.format = self.ic.IC_GetVideoFormat(self.g)
-        print('current format: ', self.format)
-        # print(self.ic.IC_printItemandElementNames(self.g))
+        # this does not work, return always 6
+        self.format_string = self.ic.IC_GetVideoFormat(self.camera)
+        print('current format string: ', self.format_string)
 
-    def img_callback(self, hGrabber, pBuffer, framenumber, pData):
+    def parse_camera_state_xml(self):
+        mytree = ET.parse('device.xml')
+        myroot = mytree.getroot()
+        for x in myroot.findall('device/videoformat'):
+            print(x.text, type(x.text))
+
+        format = x.text.split()[0]
+        if format == 'Y16':
+            self.format = 4
+        elif format == 'Y800':
+            self.format = 0
+        else:
+            raise ValueError('You have to select either Y16 or Y800,\
+                Initialize the camera again.')
+
+    start_acquire = pyqtSignal()
+    data_ready = pyqtSignal(np.ndarray, int)
+
+    @pyqtSlot()
+    def acquire(self):
+        for i in range(self.average):
+            self.data.getNextImage = 1
+            while self.data.getNextImage != 0:
+                time.sleep(0.001)
+            self.get_img_from_data()
+
+            if i == 0:
+                self.frame = self.current_img
+            elif i == 1:
+                self.frame = np.concatenate(
+                    (self.frame[np.newaxis, :], 
+                     self.current_img[np.newaxis, :],
+                    )
+                )
+            else:
+                self.frame = np.concatenate(
+                    (self.frame,
+                     self.current_img[np.newaxis, :],
+                     ),
+                )
+        self.construct_data()
+        self.data_ready.emit(self.data_avg, 0)
+
+    def img_callback(self, hGrabber, buffer, framenumber, data):
         """ This is an example callback function for image processing  with
             OpenCV
         :param: hGrabber: This is the real pointer to the grabber object.
@@ -84,24 +138,17 @@ class DMK(QObject):
         :param: framenumber : Number of the frame since the stream started
         :param: pData : Pointer to additional user data structure
         """
-        if pData.getNextImage == 1:
-            pData.getNextImage = 2
-            if pData.buffer_size > 0:
-                image = cast(pBuffer, POINTER(c_ubyte * pData.buffer_size))
-                # print(pData.buffer_size)
-                # print(len(image.contents))
-                pData.cvMat = np.ndarray(buffer=image.contents,
-                                         dtype=np.uint16,
-                                         shape=(pData.height.value,
-                                                pData.width.value))
-                                                # pData.BytesPerPixel))
-            pData.getNextImage = 0
-
-    def exit(self):  # originally close()
-        if self.camera is None:
-            return
-        if self.ic.IC_IsDevValid(self.camera):
-            self.ic.IC_StopLive(self.camera)
+        if data.getNextImage == 1:
+            data.getNextImage = 2
+            if data.buffer_size > 0:
+                image = cast(buffer, POINTER(c_ubyte * data.buffer_size))
+                data.cvMat = np.ndarray(buffer=image.contents,
+                                        dtype=data.dtype,
+                                        shape=(data.height.value,
+                                               data.width.value,
+                                               data.elements_per_pixel))
+            data.getNextImage = 0
+            # return data.cvMat
 
     def startCamera(self, wid):
         '''Start the passed camera
@@ -120,17 +167,37 @@ class DMK(QObject):
         '''
         ud.width = c_long()
         ud.height = c_long()
-        iBitsPerPixel = c_int()
-        colorformat = c_int()
+        bits_per_pixel = c_int()
+        color_format = c_int()
 
         # Query the values
         self.ic.IC_GetImageDescription(camera, ud.width, ud.height,
-                                       iBitsPerPixel, colorformat)
+                                       bits_per_pixel, color_format)
 
-        ud.BytesPerPixel = int(iBitsPerPixel.value / 8.0)
-        print('bits per pixel: ', iBitsPerPixel.value)
-        ud.buffer_size = ud.width.value * ud.height.value * ud.BytesPerPixel
+        ud.dtype, ud.elements_per_pixel = self._elements_per_pixel(color_format)
+
+        # print('bits per pixel: ', bits_per_pixel.value)
+        # print('color format: ', color_format, ud.elements_per_pixel)
+        ud.buffer_size = ud.height.value * ud.width.value * int(float(bits_per_pixel.value) / 8.0)
         ud.getNextImage = 0
+
+    def _elements_per_pixel(self, color_format):
+        # Calculate the buffer size, get the number of bytes per pixel
+        # and the data type in the numpy array.
+        # tis.SinkFormats.Y800 and others do not work for me
+        elements_per_pixel = 1
+        dtype = np.uint8
+        if color_format.value == 0:  # tis.SinkFormats.Y800:
+            elements_per_pixel = 1  # 1 byte per pixel
+        if color_format.value == 4:  # tis.SinkFormats.Y16:
+            dtype = np.uint16
+            elements_per_pixel = 1  # 1 uint16 per pixel
+        # In other part I throw error if RGB, but future cameras can be RGB
+        if color_format.value == 1:  # tis.SinkFormats.RGB24:
+            elements_per_pixel = 3  # BGR format, 3 bytes
+        if color_format.value == 2:  # tis.SinkFormats.RGB32:
+            elements_per_pixel = 4  # BGRA format, 4 bytes
+        return dtype, elements_per_pixel
 
     def snap_image(self):
         self.data.getNextImage = 1
@@ -141,66 +208,81 @@ class DMK(QObject):
 
     def get_img_from_data(self):
         # here has to be devision between 8bit and 16bit
-        self.current_img = cv2.flip(self.data.cvMat >> 4, 0)
-
-    def save_current_img(self):
-        # Here we (should) have our image in data as numpy // cv Matrix
-        name = 'data_' + str(self.counter) + '.tif'
-        cv2.imwrite(name, self.current_img)
-        self.counter += 1
-
-    # def snap_image2(self):
-    #     if self.ic.IC_SnapImage(self.g, int(2000)) == tis.IC_SUCCESS:
-    #         self.ic.IC_SaveImage(self.g, tis.T("test.bmp"),
-    #                              tis.ImageFileTypes['bmp'])
-    #         print("Image saved.")
-    #     else:
-    #         print("No frame received in 2 seconds.")
-
-    def create_grabber(self):
-        try:
-            self.g = self.ic.IC_CreateGrabber()
-            self.ic.IC_OpenVideoCaptureDevice(
-                self.g,
-                tis.T(self.name),
-                )
-        except AttributeError as e:
-            print(f'Wrong name, {e}')
+        if self.format == 4:  # Y16
+            self.current_img = cv2.flip(self.data.cvMat >> 4, 0)
+        elif self.format == 0:  # Y800
+            self.current_img = cv2.flip(self.data.cvMat, 0)
         else:
-            print('Video grabber created')
-
-    def set_vid_format(self, value: str) -> None:
-        """Can be only set when not streaming
-        TODO: check for that
-
-        Args:
-            value (str): one of the Y800, Y16, RGB24,\
-                RGB32, YUY2, Y411
+            raise ValueError('Wrong image format.')
+    
+    def construct_data(self):
         """
-        self.vid_format = value
-        ret = self.ic.IC_SetVideoFormat(
-            self.g,
-            tis.T(value),
-            )
-        return ret
+        Construct data from the 3D array from
+        :fun:`~Camera.acquire`
 
-    def set_vid_format2(self, value: int) -> None:
-        """Can be only set when not streaming
-        TODO: check for that
-
-        Args:
-            value (int):    Y800 = 0
-                            RGB24 = 1
-                            RGB32 = 2
-                            UYVY = 3
-                            Y16 = 4
+        Default is to average data and returns intX array
+        (depending on the camera dynamic range). If accumulation
+        is selected in the GUI, sum is applied over the acquired
+        ndarray. Therefore it can result in larger files.
         """
-        self.vid_format = value
-        ret = self.ic.IC_SetVideoFormat(
-            self.g,
-            c_int(value),
-            )
-        return ret
+        if self.accum:
+            self.data_avg = np.sum(self.frame, axis=0)
+        else:
+            self.data_avg = np.mean(self.frame, axis=0)
+
+        if self.rotate:
+            self.data_avg = np.rot90(self.data_avg)
+
+    # def save_current_img(self):
+    #     # Here we (should) have our image in data as numpy // cv Matrix
+    #     name = 'data_' + str(self.counter) + '.tiff'
+    #     cv2.imwrite(name, self.current_img)
+    #     self.counter += 1
+
+    # def create_grabber(self):
+    #     try:
+    #         self.g = self.ic.IC_CreateGrabber()
+    #         self.ic.IC_OpenVideoCaptureDevice(
+    #             self.g,
+    #             tis.T(self.name),
+    #             )
+    #     except AttributeError as e:
+    #         print(f'Wrong name, {e}')
+    #     else:
+    #         print('Video grabber created')
+
+    # def set_vid_format(self, value: str) -> None:
+    #     """Can be only set when not streaming
+    #     TODO: check for that
+
+    #     Args:
+    #         value (str): one of the Y800, Y16, RGB24,\
+    #             RGB32, YUY2, Y411
+    #     """
+    #     self.vid_format = value
+    #     ret = self.ic.IC_SetVideoFormat(
+    #         self.g,
+    #         tis.T(value),
+    #         )
+    #     return ret
+
+    # def set_vid_format2(self, value: int) -> None:
+    #     """Can be only set when not streaming
+    #     TODO: check for that
+
+    #     Args:
+    #         value (int):    Y800 = 0
+    #                         RGB24 = 1
+    #                         RGB32 = 2
+    #                         UYVY = 3
+    #                         Y16 = 4
+    #     """
+    #     self.vid_format = value
+    #     ret = self.ic.IC_SetVideoFormat(
+    #         self.g,
+    #         c_int(value),
+    #         )
+    #     return ret
 
     def set_frame_rate(self, value: float) -> None:
         self.frame_rate = value
@@ -247,60 +329,90 @@ class DMK(QObject):
                 "Gain".encode("utf-8"),
                 "Value".encode("utf-8"), c_float(value))
         # self._handle_ret_from_set_property()
-        self.gian = value
+        self.gain = value
+
+    def set_average(self, num):
+        """
+        How many captures are averaged into a single frame.
+
+        Args:
+            num (int): Number of averages
+        """
+        self.average = num
 
     def camera_ready(self):
-        return self.ic.IC_IsDevValid(self.g)
+        return self.ic.IC_IsDevValid(self.camera)
 
-    def release_camera(self):
-        self.ic.IC_ReleaseGrabber(self.g)
-        print('camera realeased')
-
-    start_acquire = pyqtSignal()
-    data_ready = pyqtSignal(np.ndarray, int)
+    _exit = pyqtSignal()
 
     @pyqtSlot()
-    def acquire(self):
-        no_data_count = []
-        self.ic.IC_SetVideoFormat(self.g, tis.T("Y16 (1280x720)"))
-        self.ic.IC_StartLive(self.g, 0)
-        if self.ic.IC_SnapImage(self.g, 2000) == tis.IC_SUCCESS:
-            # Declare variables of image description
-            Width = c_long()
-            Height = c_long()
-            BitsPerPixel = c_int()
-            colorformat = c_int()
+    def exit(self):
+        """
+        Release the capture port of the camera,
+        otherwise raise an exception
+        """
+        if self.camera is None:
+            return
+        if self.ic.IC_IsDevValid(self.camera):
+            print('stopping live')
+            self.ic.IC_StopLive(self.camera)
 
-            # Query the values of image description
-            self.ic.IC_GetImageDescription(
-                self.g, Width, Height,
-                BitsPerPixel, colorformat)
+        try:
+            self.ic.IC_ReleaseGrabber(self.camera)
+            print('release grabber')
+            time.sleep(0.5)
+        except Exception as e:
+            print(f'Camera closing problem: {e}')
+            return e
 
-            # Calculate the buffer size
-            bpp = int(BitsPerPixel.value / 8.0)
-            print('bpp', BitsPerPixel.value, colorformat)
-            buffer_size = Width.value * Height.value * BitsPerPixel.value
+    # def exit(self):  # originally close()
+        
 
-            # Get the image data
-            imagePtr = self.ic.IC_GetImagePtr(self.g)
+    # start_acquire = pyqtSignal()
+    # data_ready = pyqtSignal(np.ndarray, int)
 
-            imagedata = cast(imagePtr,
-                             POINTER(c_ubyte *
-                                     buffer_size))
+    # @pyqtSlot()
+    # def acquire(self):
+    #     no_data_count = []
+    #     self.ic.IC_SetVideoFormat(self.camera, tis.T("Y16 (1280x720)"))
+    #     self.ic.IC_StartLive(self.camera, 0)
+    #     if self.ic.IC_SnapImage(self.camera, 2000) == tis.IC_SUCCESS:
+    #         # Declare variables of image description
+    #         Width = c_long()
+    #         Height = c_long()
+    #         BitsPerPixel = c_int()
+    #         colorformat = c_int()
 
-            # Create the numpy array
-            self.data_avg = np.ndarray(
-                        buffer=imagedata.contents,
-                        dtype=np.uint8,
-                        shape=(Height.value,
-                               Width.value,
-                               bpp))
-            no_data_count.append(0)
-        else:
-            no_data_count.append(1)
-            print("No frame received in 2 seconds.")
-        self.data_ready.emit(self.data_avg, no_data_count)
-        self.ic.IC_StopLive(self.g)
+    #         # Query the values of image description
+    #         self.ic.IC_GetImageDescription(
+    #             self.camera, Width, Height,
+    #             BitsPerPixel, colorformat)
+
+    #         # Calculate the buffer size
+    #         bpp = int(BitsPerPixel.value / 8.0)
+    #         print('bpp', BitsPerPixel.value, colorformat)
+    #         buffer_size = Width.value * Height.value * BitsPerPixel.value
+
+    #         # Get the image data
+    #         imagePtr = self.ic.IC_GetImagePtr(self.camera)
+
+    #         imagedata = cast(imagePtr,
+    #                          POINTER(c_ubyte *
+    #                                  buffer_size))
+
+    #         # Create the numpy array
+    #         self.data_avg = np.ndarray(
+    #                     buffer=imagedata.contents,
+    #                     dtype=np.uint8,
+    #                     shape=(Height.value,
+    #                            Width.value,
+    #                            bpp))
+    #         no_data_count.append(0)
+    #     else:
+    #         no_data_count.append(1)
+    #         print("No frame received in 2 seconds.")
+    #     self.data_ready.emit(self.data_avg, no_data_count)
+    #     self.ic.IC_StopLive(self.camera)
 
 
 class Camera(QObject):

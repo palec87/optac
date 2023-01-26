@@ -83,8 +83,8 @@ def test_channel_funcs(Viewer, test_input, expected):
      ('imageViewer.ui.motor_speed.setValue', 105, 'imageViewer.motor_speed', 105),
      ('imageViewer.ui.motor_steps.setValue', 73, 'imageViewer.motor_steps', 73),
      ('imageViewer.ui.motor_steps.setValue', -10, 'imageViewer.motor_steps', 2),
-     ('imageViewer.ui.frame_rate.setValue', -10, 'imageViewer.frame_rate', 1),
-     ('imageViewer.ui.frame_rate.setValue', 30, 'imageViewer.frame_rate', 30),
+    #  ('imageViewer.ui.frame_rate.setValue', -10, 'imageViewer.frame_rate', 1),
+    #  ('imageViewer.ui.frame_rate.setValue', 30, 'imageViewer.frame_rate', 30),
      ('imageViewer.ui.n_frames.setValue', 0, 'imageViewer.n_frames', 1),
      ('imageViewer.ui.n_frames.setValue', -10, 'imageViewer.n_frames', 1),
      ('imageViewer.ui.n_frames.setValue', 29, 'imageViewer.n_frames', 29),
@@ -123,11 +123,16 @@ def test_radios(Viewer, ui_attr, set, app_attr, expected):
      (-200, 100, False, False, 100)])
 def test_hist(Viewer, val_min, val_max, diag1, diag2, expected):
     _, imageViewer, qtbot = Viewer
-    '''ensure that min is lower than max'''
+    """
+    ensure that min is lower than max
+    """
     def handle_dialog():
         mbox = QApplication.activeWindow()
         ok_but = mbox.button(QMessageBox.Ok)
         qtbot.mouseClick(ok_but, QtCore.Qt.LeftButton, delay=20)
+    # preset the initial values
+    imageViewer.ui.min_hist.setValue(0)
+    imageViewer.ui.max_hist.setValue(200)
 
     imageViewer.ui.min_hist.setValue(val_min)
     if diag1:

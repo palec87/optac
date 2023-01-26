@@ -67,7 +67,6 @@ class Gui(QtWidgets.QMainWindow):
         self.motor_on = False
         self.camera_on = False
         self.opt_running = False
-        self.save_images = False
         self.min_hist = None
         self.max_hist = None
         self.motor_steps = None
@@ -125,7 +124,6 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.accum_shots.toggled.connect(self._update_accum_shots)
 
         # measure panel
-        # self.ui.expr_metadata.textChanged(self.update_metadata_expr)
         self.ui.run_opt_btn.clicked.connect(self.exec_run_opt_btn)
         self.ui.live_recon.toggled.connect(self._update_live_recon_btn)
         self.ui.radon_idx.valueChanged.connect(self._update_radon_idx)
@@ -140,6 +138,9 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.toggle_hist.toggled.connect(self._update_toggle_hist)
         self.ui.min_hist.valueChanged.connect(self._update_hist_min)
         self.ui.max_hist.valueChanged.connect(self._update_hist_max)
+
+        # saving
+        self.ui.save_image_btn.clicked.connect(self.exec_save_image_btn)
 
         self._frame_count_set(self.frame_count)
         self._no_data_count_set(self.no_data_count)
@@ -179,6 +180,7 @@ class Gui(QtWidgets.QMainWindow):
         self.radon_idx = self.ui.radon_idx.value()
         self.min_hist = self.ui.min_hist.value()
         self.max_hist = self.ui.max_hist.value()
+        self.toggle_hist = self.ui.toggle_hist.isChecked()
         self.camera_type = self.ui.camera_type_list.currentIndex()
         self.motor_type = self.ui.motor_type_list.currentIndex()
         self.main_folder = self.ui.folder_path.toPlainText()
@@ -201,6 +203,7 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.radon_idx.setValue(d['radon_idx'])
         self.ui.min_hist.setValue(d['min_hist'])
         self.ui.max_hist.setValue(d['max_hist'])
+        self.ui.toggle_hist.setChecked(d['toggle_hist'])
         self.ui.camera_type_list.setCurrentIndex(d['camera_type_idx'])
         self.ui.motor_type_list.setCurrentIndex(d['motor_type_idx'])
         self.main_folder = d['folder_path']
@@ -225,6 +228,7 @@ class Gui(QtWidgets.QMainWindow):
         vals['radon_idx'] = self.radon_idx
         vals['min_hist'] = self.min_hist
         vals['max_hist'] = self.max_hist
+        vals['toggle_hist'] = self.toggle_hist
         vals['camera_type_idx'] = self.camera_type
         vals['motor_type_idx'] = self.motor_type
         vals['folder_path'] = self.main_folder
@@ -249,6 +253,7 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.radon_idx.setValue(10)
         self.ui.min_hist.setValue(1)
         self.ui.max_hist.setValue(250)
+        self.ui.toggle_hist.setChecked(False)
         self.ui.camera_type_list.setCurrentIndex(0)
         self.ui.motor_type_list.setCurrentIndex(0)
         self.main_folder = os.getcwd()
@@ -512,7 +517,6 @@ class Gui(QtWidgets.QMainWindow):
         try:
             self.initialize_stepper()
         except NoMotorInitialized:
-            print('here')
             self.append_history('No motor found.')
         except Exception as e:
             self.append_history(f'Motor problem, {e}.')
@@ -538,6 +542,8 @@ class Gui(QtWidgets.QMainWindow):
             self.acquire_thread.quit()
 
         # initialize
+        self.img_format = 'np.int8'
+        self.ui.motor_steps.setEnabled(True)
         if self.camera_type == 0:
             # virtual
             self.initialize_virtual_camera()
@@ -547,14 +553,14 @@ class Gui(QtWidgets.QMainWindow):
             # Sky_basic
             self.resolution = (1280, 720)
             self.initialize_sky_basic()
-            self.ui.motor_steps.setEnabled(True)
         elif self.camera_type == 2:
             # phonefix
             self.resolution = (1920, 1080)
             self.initialize_phonefix()
-            self.ui.motor_steps.setEnabled(True)
         elif self.camera_type == 3:
             self.initialize_dmk()
+            if self.camera.format == 4:
+                self.img_format = 'np.int16'
 
         self.camera_on = True
         # create and connect camera.acquire thread
@@ -566,8 +572,14 @@ class Gui(QtWidgets.QMainWindow):
 
     def initialize_dmk(self):
         self.simul_mode = False
+        try:
+            ret = self.camera.camera_ready()
+            if ret:
+                self.camera.exit()
+        except AttributeError:
+            pass
         self.camera = DMK("DMK 37BUX252")
-        wid = self.ui.camera_live.winId()
+        wid = self.ui.stream.winId()
         self.camera.startCamera(wid)
         self.append_history('camera on')
         self.camera_on = True
@@ -576,7 +588,11 @@ class Gui(QtWidgets.QMainWindow):
         if not self.camera_on:
             self.message_init_camera()
             return
-        self.camera.snap_image()
+        if self.camera.camera_ready():
+            self.camera.snap_image()
+            self.post_acquire(self.camera.current_img, 0)
+        else:
+            self.append_history('Unknown problem, camera')
 
     def initialize_sky_basic(self):
         """
@@ -634,6 +650,10 @@ class Gui(QtWidgets.QMainWindow):
         self._no_data_count_set(0)
         self.acquire()
 
+    def exec_save_image_btn(self):
+        name = self.get_time_now()
+        self.save_image(name)
+
     def _check_motors(self):
         """
         Checking the stepper motor before the OPT acquisition
@@ -654,7 +674,6 @@ class Gui(QtWidgets.QMainWindow):
         # if not initialized, do it here
         if not self.motor_on:
             self.message_init_motor()
-            print('here2')
             raise NoMotorInitialized
 
         self.ui.angle.setValue(
@@ -673,7 +692,6 @@ class Gui(QtWidgets.QMainWindow):
         """
         self.create_saving_folder()
         self.disable_btns()
-        self.save_images = True
         self.opt_running = True
 
         self._check_motors()
@@ -749,11 +767,13 @@ class Gui(QtWidgets.QMainWindow):
         try:
             self.camera.exit()
             self.acquire_thread.quit()
+            self.camera_on = False
         except Exception as e:
             print(f'problem closing acquire thread: {e}')
         if self.motor_on:
             self.stepper.shutdown()
             self.motor_thread.quit()
+        self.stop_request = False
 
     def exec_exit_btn(self):
         """
@@ -874,6 +894,7 @@ class Gui(QtWidgets.QMainWindow):
         TODO: clear also a reconstruction image.
         """
         self.current_frame = None
+        self.current_recon = None
         self.step_count = 0
 
     def collect_metadata(self):
@@ -888,7 +909,7 @@ class Gui(QtWidgets.QMainWindow):
         self.metadata['images_per_step'] = self.n_frames
 
         if self.camera_type in [0, 1]:
-            self.metadata['dynamic_range'] = np.int8
+            self.metadata['dynamic_range'] = 'np.int8'
         self.metadata['user notes'] = self.ui.expr_metadata.toPlainText()
 
     def save_metadata(self):
@@ -928,13 +949,16 @@ class Gui(QtWidgets.QMainWindow):
                               str(self.frame_count)])
         if not self.exp_path:
             self.create_saving_folder()
+        
+        # always cast image on integer dtype
+        to_save = self.current_frame.frame.astype(eval(self.img_format))
 
         if self.accum_shots:
             file_path = os.path.join(self.exp_path, fname+'.txt')
             np.savetxt(file_path, self.current_frame.frame)
         else:
-            file_path = os.path.join(self.exp_path, fname+'.jpg')
-            cv2.imwrite(file_path, self.current_frame.frame)
+            file_path = os.path.join(self.exp_path, fname+'.tiff')
+            cv2.imwrite(file_path, to_save)
 
     ###############
     # Acquisition #
@@ -982,7 +1006,7 @@ class Gui(QtWidgets.QMainWindow):
             self.finish()
 
         # saving
-        if self.save_images:
+        if self.opt_running:
             self.save_image()
 
         self._frame_count_set(self.frame_count+1)
@@ -1026,7 +1050,6 @@ class Gui(QtWidgets.QMainWindow):
         """
         self.save_metadata()
         self.enable_btns()
-        self.save_images = False
         self.opt_running = False
         self.clear_sweep_data()
         self.idling()
@@ -1050,7 +1073,7 @@ class Gui(QtWidgets.QMainWindow):
         Returns:
             str: time H-M-S
         """
-        return strftime('%H-%M-%S +0000', gmtime())
+        return strftime('%H-%M-%S', gmtime())
 
     def create_saving_folder(self):
         """Create experiment saving folder in the data saving folder
@@ -1174,6 +1197,7 @@ class Gui(QtWidgets.QMainWindow):
         First idle state and then quit threads, both
         stepper, camera and acquire threads.
         """
+
         self.idling()
         self.acquire_thread.quit()
         if self.motor_on:

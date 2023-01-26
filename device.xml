@@ -1,7 +1,7 @@
 <device_state libver="3.4" filemajor="1" fileminor="0">
     <device name="DMK 37BUX252" base_name="DMK 37BUX252" unique_name="DMK 37BUX252 1321033">
-        <videoformat>Y16 (2048x1536)</videoformat>
-        <fps>60.000240000960005204</fps>
+        <videoformat>Y800 (640x480)</videoformat>
+        <fps>119.00086870634154934</fps>
         <fliph>0</fliph>
         <flipv>0</flipv>
         <vcdpropertyitems>
