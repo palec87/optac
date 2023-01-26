@@ -29,19 +29,19 @@ import json
 import numpy as np
 
 from PyQt5 import QtCore, QtWidgets
-from modules.gui.optac_ui import Ui_MainWindow
+from optac.src.gui.optac_ui import Ui_MainWindow
 import pyqtgraph as pg
 
-from modules.control.motor_class import Stepper
-from modules.control.camera_class import (
+from optac.src.control.motor_class import Stepper
+from optac.src.control.camera_class import (
     Sky_basic,
     Virtual,
     Phonefix,
     DMK)
-from modules.control.opt_class import Data
-from modules.radon_back_projection import Radon
+from optac.src.control.opt_class import Data
+from optac.src.radon_back_projection import Radon
 
-from modules.exceptions import NoMotorInitialized
+from optac.src.exceptions import NoMotorInitialized
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']

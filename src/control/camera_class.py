@@ -15,7 +15,7 @@ import os
 import numpy as np
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 import cv2
-from modules.control.threading_class import Get_radon
+from optac.src.control.threading_class import Get_radon
 import time
 from ctypes import (
     cdll, Structure, c_float, c_int, c_long, c_ubyte, c_uint,
@@ -24,7 +24,7 @@ from ctypes import (
 
 import xml.etree.ElementTree as ET
 
-import optac.modules.dll.tisgrabber as tis
+import optac.src.dll.tisgrabber as tis
 
 
 __author__ = 'David Palecek'

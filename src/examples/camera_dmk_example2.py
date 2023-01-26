@@ -1,10 +1,10 @@
 import ctypes
-import optac.modules.dll.tisgrabber as tis
+import optac.src.dll.tisgrabber as tis
 import os
 
 print(os.getcwd())
 
-ic = ctypes.cdll.LoadLibrary("./modules/dll/tisgrabber_x64.dll")
+ic = ctypes.cdll.LoadLibrary("./src/dll/tisgrabber_x64.dll")
 tis.declareFunctions(ic)
 ic.IC_InitLibrary(0)
 # hGrabber = tis.openDevice(ic)

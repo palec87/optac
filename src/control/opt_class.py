@@ -12,10 +12,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from time import gmtime, strftime
 
-from optac.modules.control.camera_class import Basic_usb, DMK
-from optac.modules.control.motor_class import Stepper
-from optac.modules.exceptions import NoMotorInitialized
-from optac.modules.radon_back_projection import Radon
+from optac.src.control.camera_class import Basic_usb, DMK
+from optac.src.control.motor_class import Stepper
+from optac.src.exceptions import NoMotorInitialized
+from optac.src.radon_back_projection import Radon
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']

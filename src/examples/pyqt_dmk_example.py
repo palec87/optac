@@ -6,9 +6,9 @@ import numpy as np
 
 import time
 import ctypes
-import optac.modules.dll.tisgrabber as tis
+import optac.src.dll.tisgrabber as tis
 
-ic = ctypes.cdll.LoadLibrary("./modules/dll/tisgrabber_x64.dll")
+ic = ctypes.cdll.LoadLibrary("./src/dll/tisgrabber_x64.dll")
 tis.declareFunctions(ic)
 ic.IC_InitLibrary(0)
 

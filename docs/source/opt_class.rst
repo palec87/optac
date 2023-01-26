@@ -4,4 +4,4 @@ OPT class
 .. autosummary::
    :toctree: generated
 
-   opt_class
+   src.control.opt_class

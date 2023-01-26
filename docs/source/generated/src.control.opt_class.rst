@@ -1,7 +1,7 @@
-﻿opt\_class
-==========
+﻿src.control.opt\_class
+======================
 
-.. automodule:: opt_class
+.. automodule:: src.control.opt_class
 
    
    

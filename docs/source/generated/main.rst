@@ -1,7 +1,7 @@
-﻿optac\_main
-===========
+﻿main
+====
 
-.. automodule:: optac_main
+.. automodule:: main
 
    
    

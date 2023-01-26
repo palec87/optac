@@ -7,7 +7,7 @@ import numpy as np
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QObject, pyqtSignal
 from skimage.transform import radon
-from optac.modules.phantoms_argonne import shepp3d
+from optac.src.phantoms_argonne import shepp3d
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']

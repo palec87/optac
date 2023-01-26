@@ -4,4 +4,4 @@ OPTac
 .. autosummary::
    :toctree: generated
 
-   optac_main
+   main

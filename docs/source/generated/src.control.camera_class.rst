@@ -1,7 +1,7 @@
-﻿camera\_class
-=============
+﻿src.control.camera\_class
+=========================
 
-.. automodule:: camera_class
+.. automodule:: src.control.camera_class
 
    
    
@@ -18,8 +18,9 @@
    .. autosummary::
    
       Basic_usb
+      CallbackUserdata
       Camera
-      Dmk
+      DMK
       Phonefix
       Sky_basic
       Virtual

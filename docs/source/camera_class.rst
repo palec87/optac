@@ -4,4 +4,4 @@ Camera
 .. autosummary::
    :toctree: generated
 
-   camera_class
+   src.control.camera_class

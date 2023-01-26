@@ -1,5 +1,5 @@
 import ctypes 
-import optac.modules.dll.tisgrabber as tis
+import optac.src.dll.tisgrabber as tis
 import cv2
 import numpy as np
 
@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 
-ic = ctypes.cdll.LoadLibrary("./modules/dll/tisgrabber_x64.dll")
+ic = ctypes.cdll.LoadLibrary("./src/dll/tisgrabber_x64.dll")
 # ic = ctypes.cdll.LoadLibrary("./tisgrabber_x64.dll")
 
 tis.declareFunctions(ic)
