@@ -1,5 +1,5 @@
 import ctypes
-import optac.src.dll.tisgrabber as tis
+import optac.dll.tisgrabber as tis
 import os
 
 print(os.getcwd())

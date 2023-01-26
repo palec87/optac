@@ -1,4 +1,4 @@
-from optac.src.control.camera_class import DMK
+from optac.control.camera_class import DMK
 import matplotlib.pyplot as plt
 # from optac.modules.dll import tisgrabber as tis
 import numpy as np

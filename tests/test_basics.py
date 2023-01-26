@@ -36,32 +36,32 @@ def qtbot_session(qapp, request):
 @pytest.fixture(scope='session')
 def Viewer(request):
     print("  SETUP GUI")
-    app, imageViewer = main_GUI()
+    app, view = main_GUI()
     QtTest.QTest.qWait(int(0.5*100))
     qtbotbis = QtBot(app)
     QtTest.QTest.qWait(int(0.5*100))
-    return app, imageViewer, qtbotbis
+    return app, view, qtbotbis
 
 
 def test_init(Viewer):
-    _, imageViewer, qtbot = Viewer
-    assert not imageViewer.stop_request
-    assert imageViewer.idle
-    assert not imageViewer.motor_on
-    assert not imageViewer.camera_on
-    assert not imageViewer.opt_running
+    _, view, qtbot = Viewer
+    assert not view.stop_request
+    assert view.idle
+    assert not view.motor_on
+    assert not view.camera_on
+    assert not view.opt_running
 
 
 @pytest.mark.parametrize(
     'test_input,expected',
-    [("imageViewer.ui.red_ch", 0), ('imageViewer.ui.green_ch', 1),
-     ('imageViewer.ui.blue_ch', 2), ('imageViewer.ui.amp_ch', 3)])
+    [("view.ui.red_ch", 0), ('view.ui.green_ch', 1),
+     ('view.ui.blue_ch', 2), ('view.ui.amp_ch', 3)])
 def test_channel_funcs(Viewer, test_input, expected):
-    _, imageViewer, qtbot = Viewer
+    _, view, qtbot = Viewer
     QtTest.QTest.qWait(int(0.5*100))
     qtbot.mouseClick(eval(test_input), QtCore.Qt.LeftButton)
     QtTest.QTest.qWait(int(0.5*100))
-    assert imageViewer.channel == expected
+    assert view.channel == expected
 
 
 # @pytest.mark.parametrize(
@@ -75,26 +75,24 @@ def test_channel_funcs(Viewer, test_input, expected):
 
 @pytest.mark.parametrize(
     'func, set, attr, expected',
-    [('imageViewer.ui.angle.setValue', 123, 'imageViewer.angle', 123),
-     ('imageViewer.ui.angle.setValue', -370, 'imageViewer.angle', -360),
-     ('imageViewer.ui.angle.setValue', 400, 'imageViewer.angle', 400),
-     ('imageViewer.ui.motor_speed.setValue', 432, 'imageViewer.motor_speed', 432),
-     ('imageViewer.ui.motor_speed.setValue', -10, 'imageViewer.motor_speed', 100),
-     ('imageViewer.ui.motor_speed.setValue', 105, 'imageViewer.motor_speed', 105),
-     ('imageViewer.ui.motor_steps.setValue', 73, 'imageViewer.motor_steps', 73),
-     ('imageViewer.ui.motor_steps.setValue', -10, 'imageViewer.motor_steps', 2),
-    #  ('imageViewer.ui.frame_rate.setValue', -10, 'imageViewer.frame_rate', 1),
-    #  ('imageViewer.ui.frame_rate.setValue', 30, 'imageViewer.frame_rate', 30),
-     ('imageViewer.ui.n_frames.setValue', 0, 'imageViewer.n_frames', 1),
-     ('imageViewer.ui.n_frames.setValue', -10, 'imageViewer.n_frames', 1),
-     ('imageViewer.ui.n_frames.setValue', 29, 'imageViewer.n_frames', 29),
-     ('imageViewer.ui.frames2avg.setValue', 0, 'imageViewer.frames_to_avg', 1),
-     ('imageViewer.ui.frames2avg.setValue', 25, 'imageViewer.frames_to_avg', 25),
-     ('imageViewer.ui.radon_idx.setValue', -10, 'imageViewer.radon_idx', 0),
-     ('imageViewer.ui.radon_idx.setValue', 1010, 'imageViewer.radon_idx', 1010),
+    [('view.ui.angle.setValue', 123, 'view.angle', 123),
+     ('view.ui.angle.setValue', -370, 'view.angle', -360),
+     ('view.ui.angle.setValue', 400, 'view.angle', 400),
+     ('view.ui.motor_speed.setValue', 432, 'view.motor_speed', 432),
+     ('view.ui.motor_speed.setValue', -10, 'view.motor_speed', 100),
+     ('view.ui.motor_speed.setValue', 105, 'view.motor_speed', 105),
+     ('view.ui.motor_steps.setValue', 73, 'view.motor_steps', 73),
+     ('view.ui.motor_steps.setValue', -10, 'view.motor_steps', 2),
+     ('view.ui.n_frames.setValue', 0, 'view.n_frames', 1),
+     ('view.ui.n_frames.setValue', -10, 'view.n_frames', 1),
+     ('view.ui.n_frames.setValue', 29, 'view.n_frames', 29),
+     ('view.ui.frames2avg.setValue', 0, 'view.frames_to_avg', 1),
+     ('view.ui.frames2avg.setValue', 25, 'view.frames_to_avg', 25),
+     ('view.ui.radon_idx.setValue', -10, 'view.radon_idx', 0),
+     ('view.ui.radon_idx.setValue', 1010, 'view.radon_idx', 1010),
      ])
 def test_update_func(Viewer, func, set, attr, expected):
-    _, imageViewer, qtbot = Viewer
+    _, view, qtbot = Viewer
     eval(func + '(set)')
     QtTest.QTest.qWait(int(0.5*100))
     assert eval(attr) == expected
@@ -102,15 +100,15 @@ def test_update_func(Viewer, func, set, attr, expected):
 
 @pytest.mark.parametrize(
     'ui_attr, set, app_attr, expected',
-    [("imageViewer.ui.accum_shots", False, 'imageViewer.accum_shots', True),
-     ('imageViewer.ui.accum_shots', True, 'imageViewer.accum_shots', False),
-     ('imageViewer.ui.live_recon', False, 'imageViewer.live_recon', True),
-     ('imageViewer.ui.live_recon', True, 'imageViewer.live_recon', False),
-     ('imageViewer.ui.toggle_hist', True, 'imageViewer.toggle_hist', False),
-     ('imageViewer.ui.toggle_hist', False, 'imageViewer.toggle_hist', True),
+    [("view.ui.accum_shots", False, 'view.accum_shots', True),
+     ('view.ui.accum_shots', True, 'view.accum_shots', False),
+     ('view.ui.live_recon', False, 'view.live_recon', True),
+     ('view.ui.live_recon', True, 'view.live_recon', False),
+     ('view.ui.toggle_hist', True, 'view.toggle_hist', False),
+     ('view.ui.toggle_hist', False, 'view.toggle_hist', True),
      ])
 def test_radios(Viewer, ui_attr, set, app_attr, expected):
-    _, imageViewer, qtbot = Viewer
+    _, view, qtbot = Viewer
     eval(ui_attr + '.setChecked(set)')
     qtbot.mouseClick(eval(ui_attr), QtCore.Qt.LeftButton, delay=20)
     assert eval(app_attr) == expected
@@ -122,7 +120,7 @@ def test_radios(Viewer, ui_attr, set, app_attr, expected):
      (200, 250, True, False, 50),
      (-200, 100, False, False, 100)])
 def test_hist(Viewer, val_min, val_max, diag1, diag2, expected):
-    _, imageViewer, qtbot = Viewer
+    _, view, qtbot = Viewer
     """
     ensure that min is lower than max
     """
@@ -131,18 +129,18 @@ def test_hist(Viewer, val_min, val_max, diag1, diag2, expected):
         ok_but = mbox.button(QMessageBox.Ok)
         qtbot.mouseClick(ok_but, QtCore.Qt.LeftButton, delay=20)
     # preset the initial values
-    imageViewer.ui.min_hist.setValue(0)
-    imageViewer.ui.max_hist.setValue(200)
+    view.ui.min_hist.setValue(0)
+    view.ui.max_hist.setValue(200)
 
-    imageViewer.ui.min_hist.setValue(val_min)
+    view.ui.min_hist.setValue(val_min)
     if diag1:
         QtCore.QTimer.singleShot(100, handle_dialog)
 
-    imageViewer.ui.max_hist.setValue(val_max)
+    view.ui.max_hist.setValue(val_max)
     if diag2:
         QtCore.QTimer.singleShot(100, handle_dialog)
 
-    diff = imageViewer.max_hist - imageViewer.min_hist
+    diff = view.max_hist - view.min_hist
     assert diff == expected
 
 

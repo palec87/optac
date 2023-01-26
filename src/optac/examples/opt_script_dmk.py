@@ -9,7 +9,7 @@ __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
 __license__ = 'GPL'
 
-from optac.src.control.opt_class import Opt
+from optac.opt_class import Opt
 # from optac.camera_class import Camera, Phonefix
 
 exp = Opt()
