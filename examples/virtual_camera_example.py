@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from optac.src.phantoms_argonne import shepp3d
+from optac.phantoms_argonne import shepp3d
 import matplotlib.pyplot as plt
 import numpy as np
 

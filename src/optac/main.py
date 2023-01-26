@@ -29,19 +29,19 @@ import json
 import numpy as np
 
 from PyQt5 import QtCore, QtWidgets
-from src.gui.optac_ui import Ui_MainWindow
+from gui.optac_ui import Ui_MainWindow
 import pyqtgraph as pg
 
-from src.control.motor_class import Stepper
-from src.control.camera_class import (
+from control.motor_class import Stepper
+from control.camera_class import (
     Sky_basic,
     Virtual,
     Phonefix,
     DMK)
-from src.control.opt_class import Data
-from src.radon_back_projection import Radon
+from opt_class import Data
+from radon_back_projection import Radon
 
-from src.exceptions import NoMotorInitialized
+from exceptions import NoMotorInitialized
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']

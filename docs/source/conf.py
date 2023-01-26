@@ -10,7 +10,7 @@ import os
 import sys
 # for conversion from markdown to html
 import recommonmark.parser
-sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath('../../src/optac/'))
 
 project = 'OPTac'
 copyright = '2023, David Palecek'

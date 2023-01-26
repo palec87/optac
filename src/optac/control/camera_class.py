@@ -11,11 +11,10 @@ Virtual camera is a separate class.
 4. DMK 37BUX252
 """
 
-import os
 import numpy as np
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 import cv2
-from optac.src.control.threading_class import Get_radon
+from control.threading_class import Get_radon
 import time
 from ctypes import (
     cdll, Structure, c_float, c_int, c_long, c_ubyte, c_uint,
@@ -24,7 +23,7 @@ from ctypes import (
 
 import xml.etree.ElementTree as ET
 
-import optac.src.dll.tisgrabber as tis
+import dll.tisgrabber as tis
 
 
 __author__ = 'David Palecek'
@@ -33,7 +32,9 @@ __license__ = 'GPL'
 
 
 class CallbackUserdata(Structure):
-    """ Example for user data passed to the callback function. """
+    """
+    Example for user data passed to the callback function.
+    """
     def __init__(self):
         self.width = 0
         self.height = 0
@@ -47,7 +48,7 @@ class CallbackUserdata(Structure):
 class DMK(QObject):
     def __init__(self, name) -> None:
         super().__init__()
-        self.ic = cdll.LoadLibrary("./modules/dll/tisgrabber_x64.dll")
+        self.ic = cdll.LoadLibrary("./src/dll/tisgrabber_x64.dll")
         tis.declareFunctions(self.ic)
         self.ic.IC_InitLibrary(0)
         self.name = name
@@ -65,6 +66,9 @@ class DMK(QObject):
         self.select_camera()
 
     def select_camera(self):
+        """
+        Tis library
+        """
         # self.create_grabber()
         self.camera = self.ic.IC_ShowDeviceSelectionDialog(None)
         print('saving xml')
@@ -88,6 +92,9 @@ class DMK(QObject):
         print('current format string: ', self.format_string)
 
     def parse_camera_state_xml(self):
+        """
+        Parse XML with camera state settings from
+        """
         mytree = ET.parse('device.xml')
         myroot = mytree.getroot()
         for x in myroot.findall('device/videoformat'):
@@ -107,6 +114,8 @@ class DMK(QObject):
 
     @pyqtSlot()
     def acquire(self):
+        """Acquire averaged frame from the camera
+        """
         for i in range(self.average):
             self.data.getNextImage = 1
             while self.data.getNextImage != 0:
@@ -117,7 +126,7 @@ class DMK(QObject):
                 self.frame = self.current_img
             elif i == 1:
                 self.frame = np.concatenate(
-                    (self.frame[np.newaxis, :], 
+                    (self.frame[np.newaxis, :],
                      self.current_img[np.newaxis, :],
                     )
                 )
@@ -151,20 +160,23 @@ class DMK(QObject):
             # return data.cvMat
 
     def startCamera(self, wid):
-        '''Start the passed camera
-        :param UserData user data connected with the camera
-        :param Camera The camera to start
-        '''
+        """
+        Start the passed camera.
+
+        Args:
+            wid (pinter): Qwidget id
+        """
         self.ic.IC_SetContinuousMode(self.camera, 0)
         self.ic.IC_SetHWnd(self.camera, int(wid))
         self.ic.IC_StartLive(self.camera, 1)
         self.CreateUserData(self.data, self.camera)
 
     def CreateUserData(self, ud, camera):
-        ''' Create the user data for callback for the passed camera
+        """
+        Create the user data for callback for the passed camera
         :param ud User data to create
         :param camera The camera connected to the user data
-        '''
+        """
         ud.width = c_long()
         ud.height = c_long()
         bits_per_pixel = c_int()
@@ -182,6 +194,14 @@ class DMK(QObject):
         ud.getNextImage = 0
 
     def _elements_per_pixel(self, color_format):
+        """_summary_
+
+        Args:
+            color_format (int): Y16, Y800, RGB, RGB32
+
+        Returns:
+            tuple: dtype and bytes per pixel
+        """
         # Calculate the buffer size, get the number of bytes per pixel
         # and the data type in the numpy array.
         # tis.SinkFormats.Y800 and others do not work for me
@@ -200,6 +220,9 @@ class DMK(QObject):
         return dtype, elements_per_pixel
 
     def snap_image(self):
+        """
+        Wrapper for snapping DMK camera from the GUI
+        """
         self.data.getNextImage = 1
         while self.data.getNextImage != 0:
             time.sleep(0.005)
@@ -207,6 +230,14 @@ class DMK(QObject):
         print("snapping done")
 
     def get_img_from_data(self):
+        """
+        Does the greyscale conversion for 12 bit mono
+        which comes in 16bit data (shift by 4 bits right >> 4)
+
+        Raises:
+            ValueError: Does not support RGB, because our camera
+            is mono.
+        """
         # here has to be devision between 8bit and 16bit
         if self.format == 4:  # Y16
             self.current_img = cv2.flip(self.data.cvMat >> 4, 0)
@@ -214,11 +245,10 @@ class DMK(QObject):
             self.current_img = cv2.flip(self.data.cvMat, 0)
         else:
             raise ValueError('Wrong image format.')
-    
+
     def construct_data(self):
         """
         Construct data from the 3D array from
-        :fun:`~Camera.acquire`
 
         Default is to average data and returns intX array
         (depending on the camera dynamic range). If accumulation
@@ -285,10 +315,24 @@ class DMK(QObject):
     #     return ret
 
     def set_frame_rate(self, value: float) -> None:
+        """
+        Set frame rate of the initialized camera.
+        TODO: not tested
+        TODO: report back if not compatible value with the
+        current resolution settings
+
+        Args:
+            value (float): frame rate
+        """
         self.frame_rate = value
         self.ic.IC_SetFrameRate(self.g, c_float(value))
 
     def set_binning(self, value: int):
+        """Allowed binning only 2 I think.
+
+        Args:
+            value (int): _description_
+        """
         self.binning = value
         if self.binning > 0:
             self.ic.IC_SetVideoFormat(
@@ -302,6 +346,11 @@ class DMK(QObject):
                 )
 
     def set_skipping(self, value: int):
+        """Skipping some rows of the camera
+
+        Args:
+            value (int): _description_
+        """
         self.skipping = value
         if self.skipping > 0:
             self.ic.IC_SetVideoFormat(
@@ -315,6 +364,12 @@ class DMK(QObject):
                 )
 
     def set_exposure(self, value: float) -> None:
+        """
+        Set exposure time.
+
+        Args:
+            value (float): _description_
+        """
         ret = self.ic.IC_SetPropertyAbsoluteValue(
                 self.g,
                 "Exposure".encode("utf-8"),
@@ -366,8 +421,6 @@ class DMK(QObject):
             return e
 
     # def exit(self):  # originally close()
-        
-
     # start_acquire = pyqtSignal()
     # data_ready = pyqtSignal(np.ndarray, int)
 
@@ -504,7 +557,7 @@ class Camera(QObject):
     def construct_data(self):
         """
         Construct data from the 3D array from
-        :fun:`~Camera.acquire`
+        :fun:`~Camera.acquire`\
 
         Default is to average data and returns intX array
         (depending on the camera dynamic range). If accumulation
@@ -572,7 +625,8 @@ class Phonefix(Camera):
 
 # TODO: refactor as a child of Camera class
 class Sky_basic(QObject):
-    """Very basic USB camera which can work in
+    """
+    Very basic USB camera which can work in
     also with a cell phone via wifi.
 
     Args:

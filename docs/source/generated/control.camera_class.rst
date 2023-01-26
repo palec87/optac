@@ -1,7 +1,7 @@
-﻿src.control.camera\_class
-=========================
+﻿control.camera\_class
+=====================
 
-.. automodule:: src.control.camera_class
+.. automodule:: control.camera_class
 
    
    

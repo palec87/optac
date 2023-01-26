@@ -1,7 +1,7 @@
-﻿src.control.motor\_class
-========================
+﻿control.motor\_class
+====================
 
-.. automodule:: src.control.motor_class
+.. automodule:: control.motor_class
 
    
    

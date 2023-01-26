@@ -4,4 +4,4 @@ Motor class
 .. autosummary::
    :toctree: generated
 
-   src.control.motor_class
+   control.motor_class
