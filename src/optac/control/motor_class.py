@@ -11,13 +11,53 @@ denoted as arduino_stepper
 
 import time
 from telemetrix import telemetrix
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 
 from exceptions import NoMotorInitialized, MotorInitFailed
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
 __license__ = 'GPL'
+
+
+class Cont_mover(QObject):
+    def __init__(self, stepper) -> None:
+        super(QObject, self).__init__()
+        self.stepper = stepper
+
+    # finished = pyqtSignal(bool)
+    @pyqtSlot()
+    def start_cmove(self):
+        """
+        Move the stepper motor and keep cheking the
+        for the running is over in the while loop.
+        """
+        self.stepper.board.stepper_set_speed(self.stepper.motor, self.stepper.speed)
+        self.turning = True
+        print('a', self.turning)
+        self.stepper.board.stepper_run_speed(
+            self.stepper.motor)
+        print('mb', self.turning)
+        print('done1')
+        # self.finished.emit(not self.turning)
+    # _exit = pyqtSignal()
+
+    # finished = pyqtSignal(bool)
+    def stop_moving(self):
+        self.turning = False
+        self.stepper.board.stepper_stop(self.stepper.motor)
+        time.sleep(0.5)
+        print('done2')
+        # self.finished.emit(not self.turning)
+
+        print(self.stepper.board.stepper_is_running(
+                self.stepper.motor,
+                callback=self.stepper.is_running_callback,
+            ))
+
+    def run(self):
+        """Long-running task."""
+        self.stepper.start_cmove()
 
 
 class Stepper(QObject):
@@ -33,6 +73,7 @@ class Stepper(QObject):
         self.motor_type = motor_type
         self.motor = None
         self.turning = None
+        self.current_pos = None
 
         # checking regularly when the movement is over
         self.wait_const = wait_const
@@ -58,21 +99,32 @@ class Stepper(QObject):
                             interface=4,
                             pin1=8, pin2=10, pin3=9, pin4=11,
                         )
-            self.set_max_speed(1000)
+            self.set_max_speed(500)
             self.full_rotation = 2048  # steps
             self.board.stepper_set_current_position(0, 0)
             self.turning = False
+            self.board.stepper_set_current_position(
+                                        self.motor, 0)
+            self.get_position()
         else:
             raise ValueError('Unrecognised type of stepper motor')
 
         self.board.stepper_set_speed(self.motor, self.speed)
         self.board.stepper_set_acceleration(self.motor, self.acc)
 
+    def get_position(self):
+        self.board.stepper_get_current_position(
+                            self.motor,
+                            self.current_position_callback)
+        return self.current_pos
+
     def set_max_speed(self, speed):
         """Set maximum speed of the given motor"""
         self.max_speed = speed
         try:
-            self.board.stepper_set_max_speed(self.motor, self.max_speed)
+            self.board.stepper_set_max_speed(
+                self.motor,
+                self.max_speed)
         except NoMotorInitialized:
             print('Initialize a motor first.')
 
@@ -101,7 +153,7 @@ class Stepper(QObject):
                 print('motor moves by integer values or closes with "exit"')
 
             self.move_relative(dist)
-            time.sleep(0.5)
+            time.sleep(0.2)
 
     def move(self):
         """
@@ -109,16 +161,18 @@ class Stepper(QObject):
         for the running is over in the while loop.
         """
         self.turning = True
+        print('ma', self.turning)
         self.board.stepper_run(
             self.motor,
             completion_callback=self.move_over_callback,
             )
-
+        print('mb', self.turning)
         while self.turning:
             self.board.stepper_is_running(
                 self.motor,
                 callback=self.is_running_callback,
             )
+            print('mc', self.turning)
             time.sleep(self.wait_const)
 
     ##############
@@ -161,6 +215,62 @@ class Stepper(QObject):
         self.rotation_abs_over.emit(not self.turning)
     _exit = pyqtSignal()
 
+    # rotation_cont_over = pyqtSignal(bool)
+
+    # @pyqtSlot()
+    def start_cmove(self):
+        """
+        Move the stepper motor and keep cheking the
+        for the running is over in the while loop.
+        """
+        self.board.stepper_set_speed(self.motor, self.speed)
+        self.turning = True
+        print('a', self.turning)
+        self.board.stepper_run_speed(
+            self.motor)
+        print('mb', self.turning)
+        # while self.turning:
+        #     self.board.stepper_is_running(
+        #         self.motor,
+        #         callback=self.is_running_callback,
+        #     )
+        #     print('mc', self.turning)
+        #     time.sleep(self.wait_const)
+        print('done1')
+        # self.rotation_cont_over.emit(not self.turning)
+    # _exit = pyqtSignal()
+
+    def stop_moving(self):
+        self.turning = False
+        self.board.stepper_stop(self.motor)
+
+        print('done2')
+        self.board.stepper_stop(self.motor)
+        time.sleep(1.)
+        print(self.turning)
+        # self.finished.emit(not self.turning)
+
+        self.board.stepper_is_running(
+                self.motor,
+                callback=self.is_running_callback,
+            )
+
+        # self.rotation_cont_over.emit(True)
+
+    # def stop_cmove(self):
+    #     if self.cont_thread.isRunning():
+    #         self.cont_thread.quit()
+    #         print('thread stopped')
+    #         self.rotation_cont_over.emit(True)
+    #     else:
+    #         print('no running thread')
+
+    # def init_cont_move(self):
+    #     self.cont_thread = QThread(parent=self)
+    #     self.cmove = Worker(self)
+    #     self.cmove.moveToThread(self.cont_thread)
+    #     self.cont_thread.start()
+
     ############
     # Counters #
     ############
@@ -191,15 +301,17 @@ class Stepper(QObject):
     def current_position_callback(self, data):
         """Current position data in form of
         motor_id, current position in steps, time_stamp"""
-        print(
-            f'current_position_callback: \
-            {data[0]}, {data[1]}, {data[2]}\n'
-        )
+        # print(
+        #     f'current_position_callback: \
+        #     {data[0]}, {data[1]}, {data[2]}\n'
+        # )
+        self.current_pos = data[2]
 
     def is_running_callback(self, data):
         """Check if motor is running"""
+        print('data', data)
         if data[1]:
-            # print('The motor is running.')
+            print('The motor is running.')
             self.turning = True
         else:
             print('Motor IS STOPPED.')

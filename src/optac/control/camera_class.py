@@ -48,7 +48,7 @@ class CallbackUserdata(Structure):
 class DMK(QObject):
     def __init__(self, name) -> None:
         super().__init__()
-        self.ic = cdll.LoadLibrary("./src/dll/tisgrabber_x64.dll")
+        self.ic = cdll.LoadLibrary("./src/optac/dll/tisgrabber_x64.dll")
         tis.declareFunctions(self.ic)
         self.ic.IC_InitLibrary(0)
         self.name = name
@@ -238,7 +238,6 @@ class DMK(QObject):
             ValueError: Does not support RGB, because our camera
             is mono.
         """
-        # here has to be devision between 8bit and 16bit
         if self.format == 4:  # Y16
             self.current_img = cv2.flip(self.data.cvMat >> 4, 0)
         elif self.format == 0:  # Y800
@@ -263,11 +262,79 @@ class DMK(QObject):
         if self.rotate:
             self.data_avg = np.rot90(self.data_avg)
 
-    # def save_current_img(self):
-    #     # Here we (should) have our image in data as numpy // cv Matrix
-    #     name = 'data_' + str(self.counter) + '.tiff'
-    #     cv2.imwrite(name, self.current_img)
-    #     self.counter += 1
+    def get_settings(self):
+        ans = {}
+        auto_exp = c_long()
+        self.ic.IC_SetPropertySwitch(
+                    self.camera,
+                    tis.T("Exposure"),
+                    tis.T("Auto"),
+                    auto_exp,
+                )
+        ans['auto_exposure'] = auto_exp.value
+
+        exposure = c_float()
+        self.ic.IC_GetPropertyAbsoluteValue(
+                    self.camera,
+                    tis.T("Exposure"),
+                    tis.T("Value"),
+                    exposure)
+        ans['exposure time'] = exposure.value
+
+        gain = c_long()
+        self.ic.IC_GetPropertyValue(
+            self.camera,
+            tis.T("Gain"),
+            tis.T("Value"),
+            gain)
+
+        ans['gain'] = gain.value
+
+        auto_gain = c_long()
+        self.ic.IC_SetPropertySwitch(
+                    self.camera,
+                    tis.T("Gain"),
+                    tis.T("Auto"),
+                    auto_gain,
+                )
+        ans['auto_gain'] = auto_gain.value
+
+        # brightness
+        btness = c_long()
+        self.ic.IC_GetPropertyValue(
+            self.camera,
+            tis.T("Brightness"),
+            tis.T("Value"),
+            btness)
+
+        ans['brightness'] = btness.value
+
+        # sharpness
+        shness = c_long()
+        self.ic.IC_GetPropertyValue(
+            self.camera,
+            tis.T("Sharpness"),
+            tis.T("Value"),
+            btness)
+
+        ans['sharpness'] = shness.value
+
+        # binning
+        binning = c_long()
+        self.ic.IC_GetPropertyValue(
+            self.camera,
+            tis.T("Binning factor"),
+            tis.T("Value"),
+            binning)
+
+        ans['Binning factor'] = binning.value
+
+        self.ic.IC_printItemandElementNames(
+            self.camera
+        )
+        return ans
+
+
 
     # def create_grabber(self):
     #     try:
@@ -420,53 +487,6 @@ class DMK(QObject):
             print(f'Camera closing problem: {e}')
             return e
 
-    # def exit(self):  # originally close()
-    # start_acquire = pyqtSignal()
-    # data_ready = pyqtSignal(np.ndarray, int)
-
-    # @pyqtSlot()
-    # def acquire(self):
-    #     no_data_count = []
-    #     self.ic.IC_SetVideoFormat(self.camera, tis.T("Y16 (1280x720)"))
-    #     self.ic.IC_StartLive(self.camera, 0)
-    #     if self.ic.IC_SnapImage(self.camera, 2000) == tis.IC_SUCCESS:
-    #         # Declare variables of image description
-    #         Width = c_long()
-    #         Height = c_long()
-    #         BitsPerPixel = c_int()
-    #         colorformat = c_int()
-
-    #         # Query the values of image description
-    #         self.ic.IC_GetImageDescription(
-    #             self.camera, Width, Height,
-    #             BitsPerPixel, colorformat)
-
-    #         # Calculate the buffer size
-    #         bpp = int(BitsPerPixel.value / 8.0)
-    #         print('bpp', BitsPerPixel.value, colorformat)
-    #         buffer_size = Width.value * Height.value * BitsPerPixel.value
-
-    #         # Get the image data
-    #         imagePtr = self.ic.IC_GetImagePtr(self.camera)
-
-    #         imagedata = cast(imagePtr,
-    #                          POINTER(c_ubyte *
-    #                                  buffer_size))
-
-    #         # Create the numpy array
-    #         self.data_avg = np.ndarray(
-    #                     buffer=imagedata.contents,
-    #                     dtype=np.uint8,
-    #                     shape=(Height.value,
-    #                            Width.value,
-    #                            bpp))
-    #         no_data_count.append(0)
-    #     else:
-    #         no_data_count.append(1)
-    #         print("No frame received in 2 seconds.")
-    #     self.data_ready.emit(self.data_avg, no_data_count)
-    #     self.ic.IC_StopLive(self.camera)
-
 
 class Camera(QObject):
     """
@@ -483,7 +503,6 @@ class Camera(QObject):
         self.port = port  # video port to use (typically 1 or 2)
         self.channel = channel  # selecting RGB channels separately
         self.res = res  # tuple (1280,720)
-        # self.binning_factor = bin_factor  # not implemented yet
         self.accum = False  # accumulation of frames instead of averaging
         self.rotate = False  # if the output array should be rotated by 90 deg
         self.initialize()

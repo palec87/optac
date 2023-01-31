@@ -37,7 +37,7 @@ Connect VGA or HDMI camera output to the acquisition card and connect the card v
 * Objective good in comparison to the Sky basic camera.
 
 ### DMK
-Imagingsource cameras based on chips from sony (current CMOS workhorse). Different chips with diffrent specs are available in this so called industrial grade cameras. Typical price is few hundrets of $, imagingsource supposedly providing impecable support in terms of interfacing and designing custom applications.
+The Imagingsource cameras based on chips from sony (current CMOS workhorse). Different chips with diffrent specs are available in this so called industrial grade cameras. Typical price is few hundrets of $, imagingsource supposedly providing impecable support in terms of interfacing and designing custom applications.
 
 *Setup*
 Connect USB to the PC and you are good to go. This camera provides more control via the serial port.
