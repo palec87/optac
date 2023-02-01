@@ -128,7 +128,7 @@ class DMK(QObject):
                 self.frame = np.concatenate(
                     (self.frame[np.newaxis, :],
                      self.current_img[np.newaxis, :],
-                    )
+                     )
                 )
             else:
                 self.frame = np.concatenate(
@@ -136,7 +136,15 @@ class DMK(QObject):
                      self.current_img[np.newaxis, :],
                      ),
                 )
-        self.construct_data()
+
+        if self.average == 1:
+            self.data_avg = self.frame
+        else:
+            self.construct_data()
+
+        if self.rotate:
+            self.rotate()
+
         self.data_ready.emit(self.data_avg, 0)
 
     def img_callback(self, hGrabber, buffer, framenumber, data):
@@ -186,7 +194,9 @@ class DMK(QObject):
         self.ic.IC_GetImageDescription(camera, ud.width, ud.height,
                                        bits_per_pixel, color_format)
 
-        ud.dtype, ud.elements_per_pixel = self._elements_per_pixel(color_format)
+        ud.dtype, ud.elements_per_pixel = self._elements_per_pixel(
+                                                        color_format,
+                                                        )
 
         # print('bits per pixel: ', bits_per_pixel.value)
         # print('color format: ', color_format, ud.elements_per_pixel)
@@ -259,8 +269,8 @@ class DMK(QObject):
         else:
             self.data_avg = np.mean(self.frame, axis=0)
 
-        if self.rotate:
-            self.data_avg = np.rot90(self.data_avg)
+    def rotate_data(self):
+        self.data_avg = np.rot90(self.data_avg)
 
     def get_settings(self):
         ans = {}
@@ -333,8 +343,6 @@ class DMK(QObject):
             self.camera
         )
         return ans
-
-
 
     # def create_grabber(self):
     #     try:
@@ -737,7 +745,6 @@ class Virtual(QObject):
         self.radon.finished.connect(self.sino)
         self.radon.finished.connect(self.thread.quit)
         self.thread.finished.connect(self.thread.quit)
-        self.radon.progress.connect(self.report_progress)
         self.thread.start()
 
     def sino(self, data):
@@ -750,17 +757,6 @@ class Virtual(QObject):
         print('setting sino variable')
         self.sinogram = data
         # self.thread.quit()
-
-    def report_progress(self, n):
-        """Report progress
-        TODO to the progress bar
-        of the phantom sinogram generation
-
-        Args:
-            n (int): percent of progress
-        """
-        pass
-        # print(n)
 
     # boilerplate code here
     # create super Camera class

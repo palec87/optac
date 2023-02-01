@@ -83,6 +83,8 @@ class Gui(QtWidgets.QMainWindow):
         self.motor_on = False
         self.camera_on = False
         self.opt_running = False
+        self.cont_opt = False
+        self.stop_opt = False
         self.min_hist = None
         self.max_hist = None
         self.motor_steps = None
@@ -105,8 +107,8 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.abs_position.valueChanged.connect(self._update_abs_pos)
         # motor buttons
         self.ui.rotate_cont_btn.clicked.connect(self.exec_rotate_cont_btn)
-        self.ui.stop_rotate_cont_btn.clicked.connect(self.exec_stop_rotate_cont_btn)
-        # self.ui.rotate_cont_btn.setDisabled(True)  # not implemented
+        self.ui.stop_rotate_cont_btn.clicked.connect(
+            self.exec_stop_rotate_cont_btn)
         self.ui.step_motor_btn.clicked.connect(self.exec_step_motor_btn)
         self.ui.step_abs_btn.clicked.connect(self.exec_step_abs_btn)
         self.ui.motor_init_btn.clicked.connect(self.exec_motor_init_btn)
@@ -119,7 +121,6 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.motor_type_list.addItem('Uno-stepper')
 
         # camera settings
-        # self.ui.frame_rate.valueChanged.connect(self._update_frame_rate)
         self.ui.camera_type_list.currentIndexChanged.connect(
             self._update_camera_type
             )
@@ -152,6 +153,8 @@ class Gui(QtWidgets.QMainWindow):
 
         # measure panel
         self.ui.run_opt_btn.clicked.connect(self.exec_run_opt_btn)
+        self.ui.start_cont_opt_btn.clicked.connect(self.exec_start_cont_opt)
+        self.ui.stop_cont_opt_btn.clicked.connect(self.exec_stop_cont_opt)
         self.ui.live_recon.toggled.connect(self._update_live_recon_btn)
         self.ui.radon_idx.valueChanged.connect(self._update_radon_idx)
         self.ui.n_sweeps.valueChanged.connect(self._update_n_sweeps)
@@ -229,7 +232,7 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.radon_idx.setValue(d['radon_idx'])
             self.ui.min_hist.setValue(d['min_hist'])
             self.ui.max_hist.setValue(d['max_hist'])
-            self.ui.hot_pixel_std_multiple(d['hot_std'])
+            self.ui.hot_pixel_std_multiple.setValue(d['hot_std'])
             self.ui.toggle_hist.setChecked(d['toggle_hist'])
             self.ui.camera_type_list.setCurrentIndex(d['camera_type_idx'])
             self.ui.motor_type_list.setCurrentIndex(d['motor_type_idx'])
@@ -532,7 +535,7 @@ class Gui(QtWidgets.QMainWindow):
 
     def exec_hot_pixels(self):
         """
-        Block camera message before acquisition 
+        Block camera message before acquisition
         of the dark-field counts, used for identification
         of hot pixels. This is separate operation from dark
         field correction.
@@ -543,8 +546,8 @@ class Gui(QtWidgets.QMainWindow):
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setText("Block Camera")
-        text = "Reinitialize camera with maximum exposure \n time possible. Saved frame is \
-            a frame averaged 20x. Hot pixels will \
+        text = "Reinitialize camera with maximum exposure time possible.\
+            Saved frame is a frame averaged 20x. Hot pixels will \
             be identified as intensity higher than 5x STD, and their count \
             shown for reference"
         msg.setInformativeText(" ".join(text.split()))
@@ -562,7 +565,7 @@ class Gui(QtWidgets.QMainWindow):
 
     def exec_dark_field(self):
         """
-        Block camera message before acquisition 
+        Block camera message before acquisition
         of the dark-field counts, used for identification
         of hot pixels. This is separate operation from dark
         field correction.
@@ -605,6 +608,10 @@ class Gui(QtWidgets.QMainWindow):
                 "Initialize CAMERA first."
             )
             return
+        # these two lines is just a workaround
+        self.ui.n_frames.setValue(1)
+        self.ui.frames2avg.setValue(1)
+
         if self.camera.camera_ready():
             self.camera.snap_image()
             self.post_acquire(self.camera.current_img, 0)
@@ -632,23 +639,6 @@ class Gui(QtWidgets.QMainWindow):
     def exec_save_image_btn(self):
         name = self.ui.filename.toPlainText()+self.get_time_now()
         self.save_image(name)
-
-    def _check_motors(self):
-        """
-        Checking the stepper motor before the OPT acquisition
-        starts.
-
-        1. Set step count to 0, and unit of progress for \
-            sweep progress bar.
-        2. In case of virtual camera, exit method.
-        3. Initialize motor, if not already.
-        """
-        self.unit_of_progress = 100/self.motor_steps
-        self.step_count = 0
-
-        # for virtual camera, no need for a motor
-        if self.simul_mode:
-            return
 
         # if not initialized, do it here
         if not self.motor_on:
@@ -682,6 +672,26 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.progressBar.setValue(0)
         self.sweep_count_set(0)
         self.run_sweep()
+
+    def exec_start_cont_opt(self):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setText("Acquire continuous OPT NOW?")
+        text = "Pressing OK will start continuous motor rotation \
+            and 1 sec after continuous snapping of the camera frames\
+            1. Synchronization does not exist. 2. No averaging.\
+            3. Stop manually."
+        msg.setInformativeText(" ".join(text.split()))
+        msg.setStandardButtons(
+            QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+        # btn_measure = msg.button(QtWidgets.QMessageBox.Ok)
+        # btn_measure.setText('Acquire NOW?')
+        msg.buttonClicked.connect(self.acquire_cont_opt)
+        retval = msg.exec_()
+        return retval
+
+    def exec_stop_cont_opt(self):
+        self.stop_opt = True
 
     def exec_motor_close_btn(self):
         """
@@ -828,6 +838,23 @@ class Gui(QtWidgets.QMainWindow):
             self.append_history(f'Unknown motor problem: {e}.')
             self.ui.motor_init_btn.setDisabled(False)
         self.stepper.moveToThread(self.motor_thread)
+
+    def _check_motors(self):
+        """
+        Checking the stepper motor before the OPT acquisition
+        starts.
+
+        1. Set step count to 0, and unit of progress for \
+            sweep progress bar.
+        2. In case of virtual camera, exit method.
+        3. Initialize motor, if not already.
+        """
+        self.unit_of_progress = 100/self.motor_steps
+        self.step_count = 0
+
+        # for virtual camera, no need for a motor
+        if self.simul_mode:
+            return
 
     def initialize_camera(self):
         """
@@ -1050,7 +1077,7 @@ class Gui(QtWidgets.QMainWindow):
                               str(self.frame_count)])
         if not self.exp_path:
             self.create_saving_folder()
-        
+
         # always cast image on integer dtype
         to_save = self.current_frame.frame.astype(eval(self.img_format))
 
@@ -1109,9 +1136,15 @@ class Gui(QtWidgets.QMainWindow):
         if self.stop_request is True:
             self.finish()
 
+        if self.stop_opt is True:
+            self.post_cont_opt()
+
         # saving
         if self.opt_running:
             self.save_image()
+
+        if self.cont_opt:
+            self.save_image(str(self.frame_count))
 
         self._frame_count_set(self.frame_count+1)
         self.post_ac_ready.emit(True)
@@ -1123,7 +1156,6 @@ class Gui(QtWidgets.QMainWindow):
                 self.idling()
         else:
             self.acquire()
-        
 
     def post_step(self):
         """After all frames of the current step are processed,
@@ -1175,6 +1207,41 @@ class Gui(QtWidgets.QMainWindow):
         self.clear_sweep_data()
         self.idling()
 
+    def acquire_cont_opt(self, btn):
+        print(btn.text())
+        if btn.text() != 'OK':
+            return
+
+        # set acquisition values
+        self._frame_count_set(0)
+        self._no_data_count_set(0)
+        self.ui.n_frames.setValue(1000)
+        self.ui.frames2avg.setValue(1)
+        self.cont_opt = True
+
+        if not self.exp_path:
+            self.create_saving_folder()
+
+        # start the motor
+        print(self.stepper.speed, self.stepper.max_speed)
+        self.stepper.max_speed = self.motor_speed
+        print(self.stepper.speed, self.stepper.max_speed)
+
+        self.exec_rotate_cont_btn()
+        sleep(1)
+
+        # start acquisition
+        self.acquire()
+
+    def post_cont_opt(self):
+        self.exec_stop_rotate_cont_btn()
+        self.save_metadata()
+
+        # this line is a workaround to stop snapping images
+        self.ui.n_frames.setValue(1)
+        self.cont_opt = False
+        self.stop_opt = False
+
     def acquire_correction(self, btn, corr_type, averages):
         if btn.text() == 'Cancel':
             return
@@ -1204,12 +1271,12 @@ class Gui(QtWidgets.QMainWindow):
 
         # process hot pixel acquisition
         if corr_type == 'hot_pixels':
-            print(self.hot_pixels.shape)
+            # print(self.hot_pixels.shape)
             self.process_hot_pixels()
         elif corr_type == 'dark_field':
-            pass
+            self.process_dark_field()
         elif corr_type == 'flat_field':
-            pass
+            self.process_flat_field()
         else:
             raise ValueError
         self.post_ac_ready.disconnect()
@@ -1217,12 +1284,22 @@ class Gui(QtWidgets.QMainWindow):
     def process_hot_pixels(self):
         std = np.std(self.hot_pixels, dtype=np.float64)
         mean = np.mean(self.hot_pixels, dtype=np.float64)
-        print(mean, std)
+        # print(mean, std)
         hot_vals = self.hot_pixels[self.hot_pixels > (mean + self.hot_std*std)]
         hot = np.ma.masked_greater(self.hot_pixels, mean + self.hot_std*std)
-        print(hot.mask, np.sum(hot), np.sum(hot.mask), hot.shape)
-        self.ui.hot_count.display(np.sum(hot.mask))
+        # print(hot.mask, np.sum(hot), np.sum(hot.mask), hot.shape)
 
+        self.ui.hot_count.display(np.sum(hot.mask))
+        self.ui.hot_mean.display(np.mean(hot_vals))
+        self.ui.nonhot_mean.display(np.mean(hot))
+
+    def process_dark_field(self):
+        self.ui.dark_mean.display(np.mean(self.dark_field))
+        self.ui.dark_std.display(np.std(self.dark_field))
+
+    def process_flat_field(self):
+        self.ui.flat_mean.display(np.mean(self.flat_field))
+        self.ui.flat_std.display(np.std(self.flat_field))
 
     ##################################
     # 7. Metadata, saving, reporting #
@@ -1351,6 +1428,9 @@ class Gui(QtWidgets.QMainWindow):
         """
         Idle state
         """
+        if self.cont_opt:
+            self.post_cont_opt()
+
         self.idle = True
 
     def finish(self):
