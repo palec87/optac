@@ -33,16 +33,19 @@ from PyQt5 import QtCore, QtWidgets
 from gui.optac_ui import Ui_MainWindow
 import pyqtgraph as pg
 
+# this is here for pyinstaller only, so it is a workaround
+from telemetrix import telemetrix
+
 from control.motor_class import Stepper
 from control.camera_class import (
     Sky_basic,
     Virtual,
     Phonefix,
     DMK)
-from opt_class import Data
-from radon_back_projection import Radon
+from helpers.opt_class import Data
+from helpers.radon_back_projection import Radon
 
-from exceptions import NoMotorInitialized
+from helpers.exceptions import NoMotorInitialized
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
@@ -87,6 +90,7 @@ class Gui(QtWidgets.QMainWindow):
         self.stop_opt = False
         self.min_hist = None
         self.max_hist = None
+        self.rotate = 'no'
         self.motor_steps = None
         self.channel = 3
         self.camera_port = None
@@ -168,6 +172,11 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.toggle_hist.toggled.connect(self._update_toggle_hist)
         self.ui.min_hist.valueChanged.connect(self._update_hist_min)
         self.ui.max_hist.valueChanged.connect(self._update_hist_max)
+
+        self.ui.no_rotate.toggled.connect(self._update_rotate_frame)
+        self.ui.rotate_clock.toggled.connect(self._update_rotate_frame)
+        self.ui.rotate_anticlock.toggled.connect(self._update_rotate_frame)
+        self.ui.rotate_flip.toggled.connect(self._update_rotate_frame)
 
         self._frame_count_set(self.frame_count)
         self._no_data_count_set(self.no_data_count)
@@ -403,6 +412,26 @@ class Gui(QtWidgets.QMainWindow):
         if self.camera_on:
             self.camera.col_ch = self.channel
         print(self.channel)
+        return
+
+    def _update_rotate_frame(self, checked):
+        if checked:
+            return
+        if self.ui.no_rotate.isChecked():
+            # self.append_history('no rot')
+            self.rotate = 'no'
+        elif self.ui.rotate_clock.isChecked():
+            # self.append_history('clockwise')
+            self.rotate = 'clock'
+        elif self.ui.rotate_anticlock.isChecked():
+            self.rotate = 'anticlock'
+        elif self.ui.rotate_flip.isChecked():
+            # self.append_history('flip')
+            self.rotate = 'flip'
+
+        if self.camera_on:
+            self.append_history(f'changing rotate setting to {self.rotate}.')
+            self.camera.rotate = self.rotate
         return
 
     def _update_accum_shots(self):
@@ -908,7 +937,7 @@ class Gui(QtWidgets.QMainWindow):
                 self.camera.exit()
         except AttributeError:
             pass
-        self.camera = DMK("DMK 37BUX252")
+        self.camera = DMK("DMK 37BUX252", self.rotate)
         wid = self.ui.stream.winId()
         self.camera.startCamera(wid)
         self.append_history('camera on')
@@ -1219,8 +1248,8 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.frames2avg.setValue(1)
         self.cont_opt = True
 
-        if not self.exp_path:
-            self.create_saving_folder()
+        self.create_saving_folder()
+        # self.disable_btns()
 
         # start the motor
         print(self.stepper.speed, self.stepper.max_speed)

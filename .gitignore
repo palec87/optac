@@ -130,6 +130,7 @@ dmypy.json
 
 # owner's
 lif.json
+device.xml
 .travis.yml
 .circleci/
 # .github/workflows/actions_test.yaml

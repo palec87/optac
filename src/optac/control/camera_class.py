@@ -46,7 +46,7 @@ class CallbackUserdata(Structure):
 
 
 class DMK(QObject):
-    def __init__(self, name) -> None:
+    def __init__(self, name, rotate) -> None:
         super().__init__()
         self.ic = cdll.LoadLibrary("./src/optac/dll/tisgrabber_x64.dll")
         tis.declareFunctions(self.ic)
@@ -55,7 +55,7 @@ class DMK(QObject):
         self.camera = None
         self.saving = False
         self.accum = False
-        self.rotate = False
+        self.rotate = rotate
 
         self.format = None
         self.binning = 0
@@ -63,6 +63,7 @@ class DMK(QObject):
 
         self.counter = 0
         # self.exit()
+        print('camera init', self.rotate)
         self.select_camera()
 
     def select_camera(self):
@@ -142,8 +143,8 @@ class DMK(QObject):
         else:
             self.construct_data()
 
-        if self.rotate:
-            self.rotate()
+        if self.rotate != 'no':
+            self.data_avg = self.rotate_data(self.data_avg)
 
         self.data_ready.emit(self.data_avg, 0)
 
@@ -237,6 +238,8 @@ class DMK(QObject):
         while self.data.getNextImage != 0:
             time.sleep(0.005)
         self.get_img_from_data()
+        if self.rotate != 'no':
+            self.current_img = self.rotate_data(self.current_img)
         print("snapping done")
 
     def get_img_from_data(self):
@@ -269,8 +272,16 @@ class DMK(QObject):
         else:
             self.data_avg = np.mean(self.frame, axis=0)
 
-    def rotate_data(self):
-        self.data_avg = np.rot90(self.data_avg)
+    def rotate_data(self, arr):
+        print('rotating frame')
+        if self.rotate == 'clock':
+            return np.rot90(arr, k=1)
+        elif self.rotate == 'anticlock':
+            return np.rot90(arr, k=-1)
+        elif self.rotate == 'flip':
+            return np.rot90(arr, k=2)
+        else:
+            return arr
 
     def get_settings(self):
         ans = {}

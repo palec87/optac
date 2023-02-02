@@ -8,12 +8,14 @@ Interface to the stepper motors
 Small motor which comes with Arduino starting kit (28BYJ-48) is
 denoted as arduino_stepper
 """
+# import sys,os
+# sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),os.pardir))
 
 import time
 from telemetrix import telemetrix
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 
-from exceptions import NoMotorInitialized, MotorInitFailed
+from helpers.exceptions import NoMotorInitialized, MotorInitFailed
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']
