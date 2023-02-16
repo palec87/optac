@@ -11,6 +11,7 @@ Virtual camera is a separate class.
 4. DMK 37BUX252
 """
 
+import os
 import numpy as np
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 import cv2
@@ -48,7 +49,8 @@ class CallbackUserdata(Structure):
 class DMK(QObject):
     def __init__(self, name, rotate) -> None:
         super().__init__()
-        self.ic = cdll.LoadLibrary("./src/optac/dll/tisgrabber_x64.dll")
+        os.add_dll_directory("C:\\Users\\David Palecek\\Documents\\Python_projects\\optac\\optac\\src\\optac\\dll")
+        self.ic = cdll.LoadLibrary("tisgrabber_x64.dll")
         tis.declareFunctions(self.ic)
         self.ic.IC_InitLibrary(0)
         self.name = name

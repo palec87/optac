@@ -23,7 +23,10 @@ def the_callback(data):
 
 # if you are using a 28BYJ-48 Stepper Motor with ULN2003
 # comment out the line above and uncomment out the line below.
-motor = board.set_pin_mode_stepper(interface=4, pin1=8, pin2=10, pin3=9, pin4=11)
+motor = board.set_pin_mode_stepper(
+                    interface=4,
+                    pin1=8, pin2=10, pin3=9, pin4=11,
+                    )
 
 
 # set the max speed and speed

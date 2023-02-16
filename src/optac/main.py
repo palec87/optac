@@ -106,7 +106,6 @@ class Gui(QtWidgets.QMainWindow):
         # and the methods from this class
 
         # motor control values
-        
         self.ui.motor_speed.valueChanged.connect(self._update_motor_speed)
         self.ui.angle.valueChanged.connect(self._update_motor_angle)
         self.ui.motor_wait_const.valueChanged.connect(self._update_motor_wait)
