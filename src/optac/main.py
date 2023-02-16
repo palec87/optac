@@ -84,6 +84,7 @@ class Gui(QtWidgets.QMainWindow):
         self.idle = True
         self.simul_mode = False
         self.motor_on = False
+        self.motor_wait = 0.001
         self.camera_on = False
         self.opt_running = False
         self.cont_opt = False
@@ -105,8 +106,10 @@ class Gui(QtWidgets.QMainWindow):
         # and the methods from this class
 
         # motor control values
+        
         self.ui.motor_speed.valueChanged.connect(self._update_motor_speed)
         self.ui.angle.valueChanged.connect(self._update_motor_angle)
+        self.ui.motor_wait_const.valueChanged.connect(self._update_motor_wait)
         self.ui.motor_steps.valueChanged.connect(self._update_motor_steps)
         self.ui.abs_position.valueChanged.connect(self._update_abs_pos)
         # motor buttons
@@ -205,6 +208,7 @@ class Gui(QtWidgets.QMainWindow):
         """
         self.motor_speed = self.ui.motor_speed.value()
         self.angle = self.ui.angle.value()
+        self.motor_wait = self.ui.motor_wait_const.value()
         self.abs_pos = self.ui.abs_position.value()
         self.motor_steps = self.ui.motor_steps.value()
         self.n_sweeps = self.ui.n_sweeps.value()
@@ -230,6 +234,7 @@ class Gui(QtWidgets.QMainWindow):
             self.append_history('Loading last instance values')
             self.ui.motor_speed.setValue(d['motor_speed'])
             self.ui.angle.setValue(d['angle'])
+            self.ui.motor_wait_const.setValue(d['motor_wait'])
             self.ui.abs_position.setValue(d['abs_pos'])
             self.ui.motor_steps.setValue(d['motor_steps'])
             self.ui.n_sweeps.setValue(d['n_sweeps'])
@@ -260,6 +265,7 @@ class Gui(QtWidgets.QMainWindow):
         vals = {}
         vals['motor_speed'] = self.motor_speed
         vals['angle'] = self.angle
+        vals['motor_wait'] = self.motor_wait
         vals['abs_pos'] = self.abs_pos
         vals['motor_steps'] = self.motor_steps
         vals['n_sweeps'] = self.n_sweeps
@@ -284,8 +290,9 @@ class Gui(QtWidgets.QMainWindow):
         In case of no lif.json file, fill the
         default values
         """
-        self.ui.motor_speed.setValue(500)
+        self.ui.motor_speed.setValue(400)
         self.ui.angle.setValue(400)
+        self.ui.motor_wait_const.setValue(0.002)
         self.ui.abs_position.setValue(100)
         self.ui.motor_steps.setValue(4)
         self.ui.n_sweeps.setValue(1)
@@ -512,7 +519,8 @@ class Gui(QtWidgets.QMainWindow):
         """
         self.motor_speed = self.ui.motor_speed.value()
         if self.motor_on:
-            self.stepper.speed = self.motor_speed
+            self.append_history('updating motor speed')
+            self.stepper.set_speed(self.motor_speed)
 
     def _update_motor_angle(self):
         """
@@ -522,6 +530,16 @@ class Gui(QtWidgets.QMainWindow):
         2048 steps signify a full turn.
         """
         self.angle = self.ui.angle.value()
+
+    def _update_motor_wait(self):
+        """
+        Update wait constant (in s) for the motor stepping.
+        Too small might be dangerous because of threading
+        and also vibrations of the sample.
+        """
+        self.motor_wait = self.ui.motor_wait_const.value()
+        if self.motor_on:
+            self.stepper.set_wait_const(self.motor_wait)
 
     def _update_abs_pos(self):
         """
@@ -713,8 +731,6 @@ class Gui(QtWidgets.QMainWindow):
         msg.setInformativeText(" ".join(text.split()))
         msg.setStandardButtons(
             QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
-        # btn_measure = msg.button(QtWidgets.QMessageBox.Ok)
-        # btn_measure.setText('Acquire NOW?')
         msg.buttonClicked.connect(self.acquire_cont_opt)
         retval = msg.exec_()
         return retval
@@ -748,7 +764,9 @@ class Gui(QtWidgets.QMainWindow):
             self.append_history('simul mode, no rotation enabled')
             return
         self.append_history(f'motor speed: {self.stepper.speed}')
+
         self.stepper.move_relative(self.angle)
+        self._current_motor_position(self.stepper.get_position())
 
     def exec_step_abs_btn(self):
         """
@@ -761,10 +779,8 @@ class Gui(QtWidgets.QMainWindow):
             self.append_history('simul mode, no rotation enabled')
             return
         self.append_history(f'motor speed: {self.stepper.speed}')
-        print('current position', self.stepper.get_position())
         self.stepper.move_absolute(self.abs_pos)
-        sleep(0.2)
-        print('current position', self.stepper.get_position())
+        self._current_motor_position(self.stepper.get_position())
 
     def exec_rotate_cont_btn(self):
         """
@@ -773,11 +789,11 @@ class Gui(QtWidgets.QMainWindow):
         TODO: Necessary to fix the parallel threading
         to be able to acquire while rotating.
         """
-        # try without the thread
         self.stepper.start_cmove()
 
     def exec_stop_rotate_cont_btn(self):
         self.stepper.stop_moving()
+        self._current_motor_position(self.stepper.get_position())
 
     def select_folder(self):
         """
@@ -859,7 +875,9 @@ class Gui(QtWidgets.QMainWindow):
         self.motor_thread = QtCore.QThread(parent=self)
         self.motor_thread.start()
         try:
-            self.stepper = Stepper(self.motor)
+            self.stepper = Stepper(self.motor,
+                                   speed=self.motor_speed,
+                                   wait_const=self.motor_wait)
         except NoMotorInitialized:
             self.append_history('No motor exception raised.')
             self.ui.motor_init_btn.setDisabled(False)
@@ -997,6 +1015,10 @@ class Gui(QtWidgets.QMainWindow):
         """
         self.frame_count = count
         self.ui.frame_count.display(self.frame_count)
+
+    def _current_motor_position(self, pos):
+        self.motor_pos = pos
+        self.ui.current_pos.display(self.motor_pos)
 
     def _no_data_count_set(self, count):
         """
