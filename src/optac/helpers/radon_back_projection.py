@@ -48,7 +48,7 @@ class Radon():
                                    bounds_error=False, fill_value=0)
         else:
             raise ValueError
-        self.output += interpolant(t)
+        self.output += interpolant(t) * (np.pi/(2*self.n_steps))
 
     def _get_fourier_filter(self, size):
         '''size needs to be even

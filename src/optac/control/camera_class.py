@@ -11,6 +11,7 @@ Virtual camera is a separate class.
 4. DMK 37BUX252
 """
 
+import os
 import numpy as np
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot
 import cv2
@@ -46,16 +47,17 @@ class CallbackUserdata(Structure):
 
 
 class DMK(QObject):
-    def __init__(self, name) -> None:
+    def __init__(self, name, rotate) -> None:
         super().__init__()
-        self.ic = cdll.LoadLibrary("./src/dll/tisgrabber_x64.dll")
+        os.add_dll_directory("C:\\Users\\David Palecek\\Documents\\Python_projects\\optac\\optac\\src\\optac\\dll")
+        self.ic = cdll.LoadLibrary("tisgrabber_x64.dll")
         tis.declareFunctions(self.ic)
         self.ic.IC_InitLibrary(0)
         self.name = name
         self.camera = None
         self.saving = False
         self.accum = False
-        self.rotate = False
+        self.rotate = rotate
 
         self.format = None
         self.binning = 0
@@ -63,6 +65,7 @@ class DMK(QObject):
 
         self.counter = 0
         # self.exit()
+        print('camera init', self.rotate)
         self.select_camera()
 
     def select_camera(self):
@@ -128,7 +131,7 @@ class DMK(QObject):
                 self.frame = np.concatenate(
                     (self.frame[np.newaxis, :],
                      self.current_img[np.newaxis, :],
-                    )
+                     )
                 )
             else:
                 self.frame = np.concatenate(
@@ -136,7 +139,15 @@ class DMK(QObject):
                      self.current_img[np.newaxis, :],
                      ),
                 )
-        self.construct_data()
+
+        if self.average == 1:
+            self.data_avg = self.frame
+        else:
+            self.construct_data()
+
+        if self.rotate != 'no':
+            self.data_avg = self.rotate_data(self.data_avg)
+
         self.data_ready.emit(self.data_avg, 0)
 
     def img_callback(self, hGrabber, buffer, framenumber, data):
@@ -186,7 +197,9 @@ class DMK(QObject):
         self.ic.IC_GetImageDescription(camera, ud.width, ud.height,
                                        bits_per_pixel, color_format)
 
-        ud.dtype, ud.elements_per_pixel = self._elements_per_pixel(color_format)
+        ud.dtype, ud.elements_per_pixel = self._elements_per_pixel(
+                                                        color_format,
+                                                        )
 
         # print('bits per pixel: ', bits_per_pixel.value)
         # print('color format: ', color_format, ud.elements_per_pixel)
@@ -227,6 +240,8 @@ class DMK(QObject):
         while self.data.getNextImage != 0:
             time.sleep(0.005)
         self.get_img_from_data()
+        if self.rotate != 'no':
+            self.current_img = self.rotate_data(self.current_img)
         print("snapping done")
 
     def get_img_from_data(self):
@@ -238,7 +253,6 @@ class DMK(QObject):
             ValueError: Does not support RGB, because our camera
             is mono.
         """
-        # here has to be devision between 8bit and 16bit
         if self.format == 4:  # Y16
             self.current_img = cv2.flip(self.data.cvMat >> 4, 0)
         elif self.format == 0:  # Y800
@@ -260,14 +274,88 @@ class DMK(QObject):
         else:
             self.data_avg = np.mean(self.frame, axis=0)
 
-        if self.rotate:
-            self.data_avg = np.rot90(self.data_avg)
+    def rotate_data(self, arr):
+        print('rotating frame')
+        if self.rotate == 'clock':
+            return np.rot90(arr, k=1)
+        elif self.rotate == 'anticlock':
+            return np.rot90(arr, k=-1)
+        elif self.rotate == 'flip':
+            return np.rot90(arr, k=2)
+        else:
+            return arr
 
-    # def save_current_img(self):
-    #     # Here we (should) have our image in data as numpy // cv Matrix
-    #     name = 'data_' + str(self.counter) + '.tiff'
-    #     cv2.imwrite(name, self.current_img)
-    #     self.counter += 1
+    def get_settings(self):
+        ans = {}
+        auto_exp = c_long()
+        self.ic.IC_SetPropertySwitch(
+                    self.camera,
+                    tis.T("Exposure"),
+                    tis.T("Auto"),
+                    auto_exp,
+                )
+        ans['auto_exposure'] = auto_exp.value
+
+        exposure = c_float()
+        self.ic.IC_GetPropertyAbsoluteValue(
+                    self.camera,
+                    tis.T("Exposure"),
+                    tis.T("Value"),
+                    exposure)
+        ans['exposure time'] = exposure.value
+
+        gain = c_long()
+        self.ic.IC_GetPropertyValue(
+            self.camera,
+            tis.T("Gain"),
+            tis.T("Value"),
+            gain)
+
+        ans['gain'] = gain.value
+
+        auto_gain = c_long()
+        self.ic.IC_SetPropertySwitch(
+                    self.camera,
+                    tis.T("Gain"),
+                    tis.T("Auto"),
+                    auto_gain,
+                )
+        ans['auto_gain'] = auto_gain.value
+
+        # brightness
+        btness = c_long()
+        self.ic.IC_GetPropertyValue(
+            self.camera,
+            tis.T("Brightness"),
+            tis.T("Value"),
+            btness)
+
+        ans['brightness'] = btness.value
+
+        # sharpness
+        shness = c_long()
+        self.ic.IC_GetPropertyValue(
+            self.camera,
+            tis.T("Sharpness"),
+            tis.T("Value"),
+            btness)
+
+        ans['sharpness'] = shness.value
+
+        # binning
+        binning = c_long()
+        self.ic.IC_GetPropertyValue(
+            self.camera,
+            tis.T("Binning factor"),
+            tis.T("Value"),
+            binning)
+
+        ans['Binning factor'] = binning.value
+
+        self.ic.IC_printItemandElementNames(
+            self.camera
+        )
+        return ans
 
     # def create_grabber(self):
     #     try:
@@ -420,53 +508,6 @@ class DMK(QObject):
             print(f'Camera closing problem: {e}')
             return e
 
-    # def exit(self):  # originally close()
-    # start_acquire = pyqtSignal()
-    # data_ready = pyqtSignal(np.ndarray, int)
-
-    # @pyqtSlot()
-    # def acquire(self):
-    #     no_data_count = []
-    #     self.ic.IC_SetVideoFormat(self.camera, tis.T("Y16 (1280x720)"))
-    #     self.ic.IC_StartLive(self.camera, 0)
-    #     if self.ic.IC_SnapImage(self.camera, 2000) == tis.IC_SUCCESS:
-    #         # Declare variables of image description
-    #         Width = c_long()
-    #         Height = c_long()
-    #         BitsPerPixel = c_int()
-    #         colorformat = c_int()
-
-    #         # Query the values of image description
-    #         self.ic.IC_GetImageDescription(
-    #             self.camera, Width, Height,
-    #             BitsPerPixel, colorformat)
-
-    #         # Calculate the buffer size
-    #         bpp = int(BitsPerPixel.value / 8.0)
-    #         print('bpp', BitsPerPixel.value, colorformat)
-    #         buffer_size = Width.value * Height.value * BitsPerPixel.value
-
-    #         # Get the image data
-    #         imagePtr = self.ic.IC_GetImagePtr(self.camera)
-
-    #         imagedata = cast(imagePtr,
-    #                          POINTER(c_ubyte *
-    #                                  buffer_size))
-
-    #         # Create the numpy array
-    #         self.data_avg = np.ndarray(
-    #                     buffer=imagedata.contents,
-    #                     dtype=np.uint8,
-    #                     shape=(Height.value,
-    #                            Width.value,
-    #                            bpp))
-    #         no_data_count.append(0)
-    #     else:
-    #         no_data_count.append(1)
-    #         print("No frame received in 2 seconds.")
-    #     self.data_ready.emit(self.data_avg, no_data_count)
-    #     self.ic.IC_StopLive(self.camera)
-
 
 class Camera(QObject):
     """
@@ -483,7 +524,6 @@ class Camera(QObject):
         self.port = port  # video port to use (typically 1 or 2)
         self.channel = channel  # selecting RGB channels separately
         self.res = res  # tuple (1280,720)
-        # self.binning_factor = bin_factor  # not implemented yet
         self.accum = False  # accumulation of frames instead of averaging
         self.rotate = False  # if the output array should be rotated by 90 deg
         self.initialize()
@@ -718,7 +758,6 @@ class Virtual(QObject):
         self.radon.finished.connect(self.sino)
         self.radon.finished.connect(self.thread.quit)
         self.thread.finished.connect(self.thread.quit)
-        self.radon.progress.connect(self.report_progress)
         self.thread.start()
 
     def sino(self, data):
@@ -731,17 +770,6 @@ class Virtual(QObject):
         print('setting sino variable')
         self.sinogram = data
         # self.thread.quit()
-
-    def report_progress(self, n):
-        """Report progress
-        TODO to the progress bar
-        of the phantom sinogram generation
-
-        Args:
-            n (int): percent of progress
-        """
-        pass
-        # print(n)
 
     # boilerplate code here
     # create super Camera class
