@@ -702,6 +702,9 @@ class Gui(QtWidgets.QMainWindow):
                                 number of steps not possible')
             raise ValueError('wrong number of steps')
         else:
+            self.append_history(
+                f'angle set to {self.stepper.full_rotation // self.motor_steps} steps.'
+                )
             self.ui.angle.setValue(
                 self.stepper.full_rotation // self.motor_steps
                 )
