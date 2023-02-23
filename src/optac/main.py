@@ -696,6 +696,16 @@ class Gui(QtWidgets.QMainWindow):
         )
         self.append_history(f'ANGLE: {self.angle}')
 
+    def _set_opt_step(self):
+        if self.stepper.full_rotation % self.motor_steps:
+            self.append_history('Whole division of full rotation by\
+                                number of steps not possible')
+            raise ValueError('wrong number of steps')
+        else:
+            self.ui.angle.setValue(
+                self.stepper.full_rotation // self.motor_steps
+                )
+
     def exec_run_opt_btn(self):
         """
         Triggers OPT execution.
@@ -706,10 +716,12 @@ class Gui(QtWidgets.QMainWindow):
         4. Call :fun:`Gui.run_sweep`_.
         """
         self.create_saving_folder()
+
         self.disable_btns()
         self.opt_running = True
 
         self._check_motors()
+        self._set_opt_step()
 
         self.collect_metadata()
         self.metadata['sweep_start'] = []
