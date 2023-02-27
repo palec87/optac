@@ -14,8 +14,8 @@ from time import gmtime, strftime
 
 from control.camera_class import Basic_usb, DMK
 from control.motor_class import Stepper
-from exceptions import NoMotorInitialized
-from radon_back_projection import Radon
+from helpers.exceptions import NoMotorInitialized
+from helpers.radon_back_projection import Radon
 
 __author__ = 'David Palecek'
 __credits__ = ['Teresa M Correia', 'Rui Guerra']

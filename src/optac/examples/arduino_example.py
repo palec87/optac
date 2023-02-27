@@ -45,7 +45,7 @@ class Stepper:
                             interface=4,
                             pin1=8, pin2=10, pin3=9, pin4=11,
                         )
-            self.set_max_speed(1000)
+            self.set_max_speed(500)
             self.turning = False
         else:
             raise ValueError('Unrecognised type of stepper motor')
