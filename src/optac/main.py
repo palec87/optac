@@ -30,6 +30,7 @@ import numpy as np
 
 from PyQt5 import QtCore, QtWidgets
 from gui.optac_ui import Ui_MainWindow
+from gui.optac_ui_outreach import Ui_MainWindow as Outreach
 import pyqtgraph as pg
 
 from control.motor_class import Stepper
@@ -1161,6 +1162,9 @@ class Gui(QtWidgets.QMainWindow):
                     min=self.min_hist,
                     max=self.max_hist,
                 )
+            self.ui.camera_live.addLine(x=None,
+                                        y=0.8,
+                                        pen=pg.mkPen('r', width=3))
 
         except Exception as e:
             self.append_history(f'Error Plotting Last Frame, {e}')
