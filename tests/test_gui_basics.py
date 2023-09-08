@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'''Basic tests of the optac module'''
+'''Basic tests of the GUI'''
 
 import pytest
 from PyQt5 import QtCore

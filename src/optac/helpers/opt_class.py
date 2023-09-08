@@ -306,13 +306,14 @@ class Data(Opt):
     Args:
         Opt (class): _description_
     """
-    def __init__(self, frame, count):
+    def __init__(self, frame, count, format):
         super(Data, self).__init__()
-        self.frame = frame
+        self.format = format
+        self.frame = frame.astype(eval(self.format))
         self.no_data_count = count
 
     def update_frame(self, frame, count):
-        self.frame = frame
+        self.frame = frame.astype(eval(self.format))
         self.no_data_count = count
 
 

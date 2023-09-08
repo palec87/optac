@@ -8,9 +8,17 @@ class Radon():
     def __init__(self, line, steps: int) -> None:
         self.line = line
         self.n_steps = steps
-        self.sinogram = np.zeros((len(line), steps))
-        self.output_size = len(line)
-        self.output = np.zeros((len(line), len(line)))
+        if line.ndim > 1:  # 3D reconstruction
+            self.sinogram = np.zeros((line.shape[1],
+                                      steps))
+            self.output_size = line.shape[1]
+            self.output = np.zeros((line.shape[1],
+                                    line.shape[1],
+                                    line.shape[0]))
+        else:
+            self.sinogram = np.zeros((len(line), steps))
+            self.output_size = len(line)
+            self.output = np.zeros((len(line), len(line)))
         self.radon_img = self._sinogram_circle_to_square(self.sinogram)
         self.radon_img_shape = self.radon_img.shape[0]
         self.offset = (self.radon_img_shape-self.output_size)//2
@@ -28,27 +36,48 @@ class Radon():
 
     def update_recon(self, line_in, step):
         self.line = line_in
-        # padding line
-        line = np.zeros(self.projection_size_padded)
-        line[self.offset:len(line_in)+self.offset] = line_in
-
-        # fft filtering of the line
         fourier_filter = self._get_fourier_filter(self.projection_size_padded)
-        projection = fft(line) * fourier_filter
-        radon_filtered = np.real(ifft(projection)[:self.radon_img_shape])
+        # padding line
+        if self.line.ndim > 1:
+            line = np.zeros((self.line.shape[0], self.projection_size_padded))
+            line[:, self.offset:line_in.shape[1] + self.offset] = line_in
+            # interpolation on the circle
+            interpolation = 'linear'
+            t = self.ypr * np.cos(self.theta[step]) - self.xpr * np.sin(self.theta[step])
+            for i in range(len(self.line[:, 0])):
+                # fft filtering of the line
+                projection = fft(line[i, :]) * fourier_filter
+                radon_filtered = np.real(ifft(projection)[:self.radon_img_shape])
 
-        # interpolation on the circle
-        interpolation = 'linear'
-        t = self.ypr * np.cos(self.theta[step]) - self.xpr * np.sin(self.theta[step])
-        if interpolation == 'linear':
-            interpolant = interp1d(self.x, radon_filtered, kind='linear',
-                                   bounds_error=False, fill_value=0)
-        elif interpolation == 'cubic':
-            interpolant = interp1d(self.x, radon_filtered, kind='cubic',
-                                   bounds_error=False, fill_value=0)
+                if interpolation == 'linear':
+                    interpolant = interp1d(self.x, radon_filtered, kind='linear',
+                                           bounds_error=False, fill_value=0)
+                elif interpolation == 'cubic':
+                    interpolant = interp1d(self.x, radon_filtered, kind='cubic',
+                                           bounds_error=False, fill_value=0)
+                else:
+                    raise ValueError
+                self.output[:, :, i] += interpolant(t) * (np.pi/(2*self.n_steps))
         else:
-            raise ValueError
-        self.output += interpolant(t) * (np.pi/(2*self.n_steps))
+            line = np.zeros(self.projection_size_padded)
+            line[self.offset:len(line_in)+self.offset] = line_in
+
+            # fft filtering of the line
+            projection = fft(line) * fourier_filter
+            radon_filtered = np.real(ifft(projection)[:self.radon_img_shape])
+
+            # interpolation on the circle
+            interpolation = 'linear'
+            t = self.ypr * np.cos(self.theta[step]) - self.xpr * np.sin(self.theta[step])
+            if interpolation == 'linear':
+                interpolant = interp1d(self.x, radon_filtered, kind='linear',
+                                       bounds_error=False, fill_value=0)
+            elif interpolation == 'cubic':
+                interpolant = interp1d(self.x, radon_filtered, kind='cubic',
+                                       bounds_error=False, fill_value=0)
+            else:
+                raise ValueError
+            self.output += interpolant(t) * (np.pi/(2*self.n_steps))
 
     def _get_fourier_filter(self, size):
         '''size needs to be even

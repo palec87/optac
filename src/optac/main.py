@@ -28,8 +28,16 @@ import cv2
 import json
 import numpy as np
 from functools import partial
+import pyqtgraph.opengl as gl
+import matplotlib
+matplotlib.use('Qt5Agg')
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtGui import QPixmap
 from gui.optac_ui import Ui_MainWindow
 from gui.optac_ui_outreach import Ui_MainWindow as Outreach
 import pyqtgraph as pg
@@ -73,12 +81,49 @@ pg.setConfigOption('foreground', 'k')
 ###################
 
 
+class MplCanvas(FigureCanvasQTAgg):
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = self.fig.add_subplot(111)  # , projection='3d')
+        super(MplCanvas, self).__init__(self.fig)
+
+
+class Dialog(QtWidgets.QDialog):
+    def __init__(self, arr):
+        QtWidgets.QDialog.__init__(self)
+        self.layout = QtWidgets.QHBoxLayout()  # create a layout to add the plotwidget to
+        self.graphWidget = MplCanvas()
+        self.layout.addWidget(self.graphWidget)  # add the widget to the layout
+        self.setLayout(self.layout)  # and set the layout on the dialog
+
+        # 3D plotting
+        # r, g, b = np.indices((arr.shape[0]+1, arr.shape[1]+1, arr.shape[2]+1))
+        # norm = plt.Normalize()
+        # colors = plt.cm.Greys(norm(arr))
+        # self.graphWidget.axes.voxels(
+        #     r, g, b, arr,
+        #     facecolors=colors,
+        #     alpha=0.1)
+
+        # 1D plotting
+        # self.graphWidget.axes.plot([0,1,2,3,4], [10,1,20,3,40])
+
+        # 2D slice of the reconstruction
+        print(arr.shape, np.amax(arr), np.amin(arr))
+        # self.graphWidget.axes.imshow(arr[:, :, 0])
+        # divider = make_axes_locatable(self.graphWidget.axes)
+        # cax = divider.append_axes('top', size='5%', pad=0.05)
+        im = self.graphWidget.axes.imshow(arr[:, :, 0], cmap='Greys')
+        self.graphWidget.fig.colorbar(im)#, cax=cax, orientation='vertical')
+
+
 class Gui(QtWidgets.QMainWindow):
     def __init__(self, init_values_file):
         super(Gui, self).__init__()
-        self.ui = Ui_MainWindow()
+        self.ui = Outreach()#Ui_MainWindow()
         self.ui.setupUi(self)
         self.show()
+        self.create_plots()
 
         self.init_file = init_values_file
         self.stop_request = False
@@ -88,6 +133,7 @@ class Gui(QtWidgets.QMainWindow):
         self.motor_wait = 0.001
         self.camera_on = False
         self.opt_running = False
+        self.save_opt = True
         self.cont_opt = False
         self.stop_opt = False
         self.min_hist = None
@@ -103,6 +149,13 @@ class Gui(QtWidgets.QMainWindow):
         self.toggle_hist = False
         self.exp_path = None
 
+        # add logo
+        self.pixmap = QPixmap('data\\logo3.png')
+        self.ui.logo.setPixmap(self.pixmap)
+        self.ui.logo.resize(
+            self.pixmap.width(),
+            self.pixmap.height(),
+        )
         # link GUI objects in optac_ui.py
         # and the methods from this class
 
@@ -163,8 +216,18 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.start_cont_opt_btn.clicked.connect(self.exec_start_cont_opt)
         self.ui.stop_cont_opt_btn.clicked.connect(self.exec_stop_cont_opt)
         self.ui.live_recon.toggled.connect(self._update_live_recon_btn)
+        self.ui.live_recon_3d.toggled.connect(self._update_live_recon_3d_btn)
+        self.ui.save_opt.toggled.connect(self._update_save_opt)
+        self.ui.show_3d_btn.clicked.connect(self.exec_show_3d_btn)
+        self.ui.show_3d_btn2.clicked.connect(self.exec_show_3d_btn2)
         self.ui.radon_idx.valueChanged.connect(self._update_radon_idx)
         self.ui.n_sweeps.valueChanged.connect(self._update_n_sweeps)
+
+        # recon rectangle
+        self.ui.ulx.valueChanged.connect(self._update_rect)
+        self.ui.uly.valueChanged.connect(self._update_rect)
+        self.ui.brx.valueChanged.connect(self._update_rect)
+        self.ui.bry.valueChanged.connect(self._update_rect)
 
         # Control panel
         self.ui.stop_btn.clicked.connect(self.exec_stop_btn)
@@ -217,6 +280,8 @@ class Gui(QtWidgets.QMainWindow):
         self.n_frames = self.ui.n_frames.value()
         self.accum_shots = self.ui.accum_shots.isChecked()
         self.live_recon = self.ui.live_recon.isChecked()
+        self.live_recon_3d = self.ui.live_recon_3d.isChecked()
+        self.save_opt = self.ui.save_opt.isChecked()
         self.radon_idx = self.ui.radon_idx.value()
         self.min_hist = self.ui.min_hist.value()
         self.max_hist = self.ui.max_hist.value()
@@ -225,6 +290,10 @@ class Gui(QtWidgets.QMainWindow):
         self.camera_type = self.ui.camera_type_list.currentIndex()
         self.motor_type = self.ui.motor_type_list.currentIndex()
         self.main_folder = self.ui.folder_path.toPlainText()
+        self.rect = (self.ui.ulx.value(),
+                     self.ui.uly.value(),
+                     self.ui.brx.value(),
+                     self.ui.bry.value())
 
     def _load_gui_values(self, d):
         """
@@ -243,6 +312,8 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.n_frames.setValue(d['n_frames'])
             self.ui.accum_shots.setChecked(d['accum_shots'])
             self.ui.live_recon.setChecked(d['live_recon'])
+            self.ui.live_recon_3d.setChecked(d['live_recon_3d'])
+            self.ui.save_opt.setChecked(d['save_opt'])
             self.ui.radon_idx.setValue(d['radon_idx'])
             self.ui.min_hist.setValue(d['min_hist'])
             self.ui.max_hist.setValue(d['max_hist'])
@@ -250,7 +321,12 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.toggle_hist.setChecked(d['toggle_hist'])
             self.ui.camera_type_list.setCurrentIndex(d['camera_type_idx'])
             self.ui.motor_type_list.setCurrentIndex(d['motor_type_idx'])
+            self.ui.ulx.setValue(d['rect'][0])
+            self.ui.uly.setValue(d['rect'][1])
+            self.ui.brx.setValue(d['rect'][2])
+            self.ui.bry.setValue(d['rect'][3])
             self.main_folder = d['folder_path']
+            
         except KeyError:
             self.append_history('Not all init values found, loading defaults.')
             self._no_init_values()
@@ -274,6 +350,8 @@ class Gui(QtWidgets.QMainWindow):
         vals['n_frames'] = self.n_frames
         vals['accum_shots'] = self.accum_shots
         vals['live_recon'] = self.live_recon
+        vals['live_recon_3d'] = self.live_recon_3d
+        vals['save_opt'] = self.save_opt
         vals['radon_idx'] = self.radon_idx
         vals['min_hist'] = self.min_hist
         vals['max_hist'] = self.max_hist
@@ -282,6 +360,10 @@ class Gui(QtWidgets.QMainWindow):
         vals['camera_type_idx'] = self.camera_type
         vals['motor_type_idx'] = self.motor_type
         vals['folder_path'] = self.main_folder
+        vals['rect'] = (self.ui.ulx.value(),
+                        self.ui.uly.value(),
+                        self.ui.brx.value(),
+                        self.ui.bry.value())
         with open(self.init_file, 'w') as f:
             f.write(json.dumps(vals))
 
@@ -301,6 +383,8 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.n_frames.setValue(10)
         self.ui.accum_shots.setChecked(False)
         self.ui.live_recon.setChecked(False)
+        self.ui.live_recon_3d.setChecked(False)
+        self.ui.save_opt.setChecked(True)
         self.ui.radon_idx.setValue(10)
         self.ui.min_hist.setValue(1)
         self.ui.max_hist.setValue(250)
@@ -309,11 +393,24 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.camera_type_list.setCurrentIndex(0)
         self.ui.motor_type_list.setCurrentIndex(0)
         self.main_folder = os.getcwd()
+        self.ui.ulx.setValue(0)
+        self.ui.uly.setValue(1)
+        self.ui.brx.setValue(1)
+        self.ui.bry.setValue(0)
         self._update_folder_path()
 
     ######################################
     # 2. UI interfacing ##################
     ######################################
+    def _update_rect(self):
+        self.rect = (self.ui.ulx.value(),
+                     self.ui.uly.value(),
+                     self.ui.brx.value(),
+                     self.ui.bry.value())
+
+        # no plotting of the rectangle, uncomment if in use
+        # self.replot_rectangle()
+
     def _update_hot_std_mult(self):
         self.hot_std = self.ui.hot_pixel_std_multiple.value()
 
@@ -385,6 +482,7 @@ class Gui(QtWidgets.QMainWindow):
         Updated from the GUI.
         """
         self.radon_idx = self.ui.radon_idx.value()
+        self.replot_recon_line()
 
     def _update_live_recon_btn(self):
         """
@@ -392,6 +490,12 @@ class Gui(QtWidgets.QMainWindow):
         during the experiment.
         """
         self.live_recon = self.ui.live_recon.isChecked()
+
+    def _update_live_recon_3d_btn(self):
+        self.live_recon_3d = self.ui.live_recon_3d.isChecked()
+
+    def _update_save_opt(self):
+        self.save_opt = self.ui.save_opt.isChecked()
 
     def _update_camera_channels(self, checked):
         """
@@ -425,15 +529,12 @@ class Gui(QtWidgets.QMainWindow):
         if checked:
             return
         if self.ui.no_rotate.isChecked():
-            # self.append_history('no rot')
             self.rotate = 'no'
         elif self.ui.rotate_clock.isChecked():
-            # self.append_history('clockwise')
             self.rotate = 'clock'
         elif self.ui.rotate_anticlock.isChecked():
             self.rotate = 'anticlock'
         elif self.ui.rotate_flip.isChecked():
-            # self.append_history('flip')
             self.rotate = 'flip'
 
         if self.camera_on:
@@ -697,15 +798,61 @@ class Gui(QtWidgets.QMainWindow):
         )
         self.append_history(f'ANGLE: {self.angle}')
 
+    def exec_show_3d_btn2(self):
+        dialog = Dialog(self.recon_3d.output)
+        dialog.exec_()
+
+    def exec_show_3d_btn(self):
+        w = gl.GLViewWidget()
+        # w.orbit(250, 260)
+        # w.setCameraPosition(0, 0, 0)  # this does not work.
+        w.show()
+        w.setWindowTitle('3D Projection: GLVolumeItem')
+        w.setCameraPosition(distance=200)
+
+        # g = gl.GLGridItem()
+        # g.scale(10, 10, 1)
+        # w.addItem(g)
+        # data = np.random.random(125).reshape(5,5,5)
+        data = self.recon_3d.output
+        positive = np.log(np.clip(data, 0, data.max())**2)
+        negative = np.log(np.clip(-data, 0, -data.min())**2)
+        positive = positive * (255./positive.max())
+        negative = negative * (255./negative.max())
+        positive[np.isinf(positive)] = 0
+        negative[np.isinf(negative)] = 0
+
+        d2 = np.empty(data.shape + (4,), dtype=np.ubyte)
+        d2[..., 0] = positive.astype(int) % 256
+        d2[..., 1] = negative.astype(int) % 256
+        d2[..., 2] = d2[..., 1]
+        d2[..., 3] = d2[..., 0]*0.3 + d2[..., 1]*0.3
+        d2[..., 3] = (d2[..., 3].astype(float) / 255.)**2 * 255
+
+        # RGB orientation lines (optional)
+        d2[:, 0, 0] = [255, 0, 0, 255]
+        d2[0, :, 0] = [0, 255, 0, 255]
+        d2[0, 0, :] = [0, 0, 255, 255]
+
+        v = gl.GLVolumeItem(d2, sliceDensity=1, smooth=False,
+                            glOptions='translucent')
+        v.translate(-1000, -1000, -1000)
+        w.addItem(v)
+
+        ax = gl.GLAxisItem()
+        w.addItem(ax)
+
     def _set_opt_step(self):
+        if not self.motor_on:
+            raise NoMotorInitialized
+
         if self.stepper.full_rotation % self.motor_steps:
             self.append_history('Whole division of full rotation by\
                                 number of steps not possible')
             raise ValueError('wrong number of steps')
         else:
             self.append_history(
-                f'angle set to {self.stepper.full_rotation // self.motor_steps} steps.'
-                )
+                f'angle set to {self.stepper.full_rotation // self.motor_steps} steps.')
             self.ui.angle.setValue(
                 self.stepper.full_rotation // self.motor_steps
                 )
@@ -721,11 +868,9 @@ class Gui(QtWidgets.QMainWindow):
         """
         self.create_saving_folder()
 
-        self.disable_btns()
-        self.opt_running = True
-
         self._check_motors()
-        self._set_opt_step()
+        if not self.simul_mode:
+            self._set_opt_step()
 
         self.collect_metadata()
         self.metadata['sweep_start'] = []
@@ -733,6 +878,8 @@ class Gui(QtWidgets.QMainWindow):
         self.metadata['sweep_start'].append(self.get_time_now())
         self.ui.progressBar.setValue(0)
         self.sweep_count_set(0)
+        self.disable_btns()
+        self.opt_running = True
         self.run_sweep()
 
     def exec_start_cont_opt(self):
@@ -762,6 +909,7 @@ class Gui(QtWidgets.QMainWindow):
         """
         try:
             self.stepper.shutdown()
+            self.motor_thread.quit()
         except Exception as e:
             self.append_history(f'Problem closing motor, {e}')
         else:
@@ -833,6 +981,9 @@ class Gui(QtWidgets.QMainWindow):
         """
         self.append_history('Stopped')
         self.stop_request = True
+        if self.opt_running:
+            self.post_opt()
+
         try:
             self.camera.exit()
             self.acquire_thread.quit()
@@ -840,8 +991,9 @@ class Gui(QtWidgets.QMainWindow):
         except Exception as e:
             print(f'problem closing acquire thread: {e}')
         if self.motor_on:
-            self.stepper.shutdown()
-            self.motor_thread.quit()
+            self.exec_motor_close_btn()
+            # self.stepper.shutdown()
+            # self.motor_thread.quit()
         self.stop_request = False
 
     def exec_exit_btn(self):
@@ -1013,7 +1165,6 @@ class Gui(QtWidgets.QMainWindow):
         """
         print('initializing virtual camera')
         self.simul_mode = True
-        self.append_history(str(self.simul_mode))
         self.camera = Virtual(self.simul_angles)
 
     #######################
@@ -1144,15 +1295,31 @@ class Gui(QtWidgets.QMainWindow):
         if not self.exp_path:
             self.create_saving_folder()
 
-        # always cast image on integer dtype
-        to_save = self.current_frame.frame.astype(eval(self.img_format))
+        ############################################
+        # Casting now happens on the acquire level #
+        ############################################
+        
+        # print(f'frame format: {type(self.current_frame.frame)}')
+        # to_save = self.current_frame.frame.astype(eval(self.img_format))
+        # print(f'to_save format: {type(to_save)}')
 
         if self.accum_shots:
             file_path = os.path.join(self.exp_path, fname+'.txt')
             np.savetxt(file_path, self.current_frame.frame)
         else:
+            print(f"saving {fname + '.tiff'} in {self.img_format} format.")
+#             print(f'Counts of to_save: {np.amax(to_save)}, mean counts: {np.mean(to_save)}')
+#             print(f'std counts: {np.std(to_save)}')
+#             print('HISTOGRAM')
+#             bins = [0, 0.5, 0.9, 1, 1.2, 1.5, 2, 5, 10, 20]
+#             print(np.histogram(to_save, bins=bins))
+            print(f'counts of Frame: {np.amax(self.current_frame.frame)}, \
+mean counts: {np.mean(self.current_frame.frame)}')
+            print(f'std counts: {np.std(self.current_frame.frame)}')
+            print('HISTOGRAM')
+            print(np.histogram(self.current_frame.frame))
             file_path = os.path.join(self.exp_path, fname+'.tiff')
-            cv2.imwrite(file_path, to_save)
+            cv2.imwrite(file_path, self.current_frame.frame)
 
     ##########################
     # 6. ACQUISITION #########
@@ -1194,7 +1361,7 @@ class Gui(QtWidgets.QMainWindow):
             self.current_frame.update_frame(frame, no_frame_count)
         except AttributeError:
             print('current_frame does not exist, creating a new one.')
-            self.current_frame = Data(frame, no_frame_count)
+            self.current_frame = Data(frame, no_frame_count, self.img_format)
 
         self.current_frame_plot()
 
@@ -1206,10 +1373,10 @@ class Gui(QtWidgets.QMainWindow):
             self.post_cont_opt()
 
         # saving
-        if self.opt_running:
+        if self.opt_running and self.save_opt:
             self.save_image()
 
-        if self.cont_opt:
+        if self.cont_opt and self.save_opt:
             self.save_image(str(self.frame_count))
 
         self._frame_count_set(self.frame_count+1)
@@ -1235,6 +1402,9 @@ class Gui(QtWidgets.QMainWindow):
         if self.live_recon:
             self.update_recon()
             self.current_recon_plot()
+
+        if self.live_recon_3d:
+            self.update_recon_3d()
 
         if self.step_count == self.motor_steps-1:
             self.post_sweep()
@@ -1268,6 +1438,12 @@ class Gui(QtWidgets.QMainWindow):
         4. Go to idling() state.
         """
         self.save_metadata()
+        if self.save_opt:
+            try:
+                np.save('test.npy', self.recon_3d.output)
+            except AttributeError:
+                self.append_history('No 3D reconstruction to save.')
+
         self.enable_btns()
         self.opt_running = False
         self.clear_sweep_data()
@@ -1337,7 +1513,6 @@ class Gui(QtWidgets.QMainWindow):
 
         # process hot pixel acquisition
         if corr_type == 'hot_pixels':
-            # print(self.hot_pixels.shape)
             self.process_hot_pixels()
         elif corr_type == 'dark_field':
             self.process_dark_field()
@@ -1350,12 +1525,11 @@ class Gui(QtWidgets.QMainWindow):
     def process_hot_pixels(self):
         std = np.std(self.hot_pixels, dtype=np.float64)
         mean = np.mean(self.hot_pixels, dtype=np.float64)
-        # print(mean, std)
+        # hot_std is the cutoff
         hot_vals = self.hot_pixels[self.hot_pixels > (mean + self.hot_std*std)]
         hot = np.ma.masked_greater(self.hot_pixels, mean + self.hot_std*std)
-        # print(hot.mask, np.sum(hot), np.sum(hot.mask), hot.shape)
 
-        self.ui.hot_count.display(np.sum(hot.mask))
+        self.ui.hot_count.display(len(hot_vals))
         self.ui.hot_mean.display(np.mean(hot_vals))
         self.ui.nonhot_mean.display(np.mean(hot))
 
@@ -1438,6 +1612,25 @@ class Gui(QtWidgets.QMainWindow):
                 print(e)
                 self.post_opt()
 
+    def update_recon_3d(self):
+        try:
+            self.recon_3d.update_recon(
+                self.current_frame.frame[self.rect[1]:self.rect[3],
+                                         self.rect[0]:self.rect[2]],
+                self.step_count,
+            )
+        except AttributeError:
+            try:
+                print('Creating new 3D recon object')
+                self.recon_3d = Radon(
+                    self.current_frame.frame[self.rect[1]:self.rect[3],
+                                             self.rect[0]:self.rect[2]],
+                    self.motor_steps,
+                )
+            except IndexError as e:
+                print(e)
+                self.post_opt()
+
     def create_plots(self):
         """
         Creates plots during the GUI initialization processes
@@ -1454,6 +1647,9 @@ class Gui(QtWidgets.QMainWindow):
             bottom='pixel X'
         )
 
+        self.rect_plot = None
+        self.line_plot = None
+
     def current_frame_plot(self):
         """
         Update current frame plot. Or raise exception.
@@ -1467,13 +1663,39 @@ class Gui(QtWidgets.QMainWindow):
                     min=self.min_hist,
                     max=self.max_hist,
                 )
-            self.ui.camera_live.addLine(x=None,
-                                        y=0.8,
-                                        pen=pg.mkPen('r', width=3))
 
         except Exception as e:
             self.append_history(f'Error Plotting Last Frame, {e}')
         return
+
+    def replot_rectangle(self):
+        camera_v = self.ui.camera_live.getView()
+        if self.rect_plot:
+            camera_v.removeItem(self.rect_plot)
+
+        self.rect_plot = pg.PlotCurveItem(
+            x=[self.rect[0],
+               self.rect[2],
+               self.rect[2],
+               self.rect[0],
+               self.rect[0]],
+            y=[self.rect[1],
+               self.rect[1],
+               self.rect[3],
+               self.rect[3],
+               self.rect[1]],
+            pen=pg.mkPen(width=3, color='b'))
+        camera_v.addItem(self.rect_plot)
+
+    def replot_recon_line(self):
+        camera_v = self.ui.camera_live.getView()
+        if self.line_plot:
+            camera_v.removeItem(self.line_plot)
+
+        self.line_plot = pg.PlotCurveItem(
+            y=[self.radon_idx, self.radon_idx],
+            pen=pg.mkPen(width=3, color='r'))
+        camera_v.addItem(self.line_plot)
 
     def current_recon_plot(self):
         """
@@ -1561,8 +1783,8 @@ def main_GUI():
     app = QtWidgets.QApplication(sys.argv)
     init_values_file = os.path.join(os.getcwd(), 'lif.json')
     gui = Gui(init_values_file=init_values_file)
-    gui.show()
-    gui.create_plots()
+    # gui.show()
+    # gui.create_plots()
     return app, gui
 
 
