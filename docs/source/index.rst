@@ -12,11 +12,14 @@ Welcome to OPTac's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   optac_main
    hardware
+   acquisition
+   app
+   optac_main
    opt_class
    camera_class
    motor_class
+   corrections
 
 
 

@@ -1,7 +1,7 @@
-﻿opt\_class
-==========
+﻿helpers.opt\_class
+==================
 
-.. automodule:: opt_class
+.. automodule:: helpers.opt_class
 
    
    

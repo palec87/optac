@@ -11,7 +11,8 @@ Control of the motors is done via Arduino board, notes on board
 wiring can be found in the docs (TODO docs)
 
 TODO ROI for the cameras which support that.
-TODO Save images into a check radio button
+TODO Save images into a check radio button.
+TODO Plotting 3d needs to be separate class or left to napari.
 
 Small motor which comes with Arduino starting kit (28BYJ-48) is
 denoted as Uno-stepper
@@ -28,11 +29,9 @@ import cv2
 import json
 import numpy as np
 from functools import partial
-import pyqtgraph.opengl as gl
+
 import matplotlib
 matplotlib.use('Qt5Agg')
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
@@ -79,42 +78,6 @@ pg.setConfigOption('foreground', 'k')
 # 10. MESSAGES
 # Main
 ###################
-
-
-class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = self.fig.add_subplot(111)  # , projection='3d')
-        super(MplCanvas, self).__init__(self.fig)
-
-
-class Dialog(QtWidgets.QDialog):
-    def __init__(self, arr):
-        QtWidgets.QDialog.__init__(self)
-        self.layout = QtWidgets.QHBoxLayout()  # create a layout to add the plotwidget to
-        self.graphWidget = MplCanvas()
-        self.layout.addWidget(self.graphWidget)  # add the widget to the layout
-        self.setLayout(self.layout)  # and set the layout on the dialog
-
-        # 3D plotting
-        # r, g, b = np.indices((arr.shape[0]+1, arr.shape[1]+1, arr.shape[2]+1))
-        # norm = plt.Normalize()
-        # colors = plt.cm.Greys(norm(arr))
-        # self.graphWidget.axes.voxels(
-        #     r, g, b, arr,
-        #     facecolors=colors,
-        #     alpha=0.1)
-
-        # 1D plotting
-        # self.graphWidget.axes.plot([0,1,2,3,4], [10,1,20,3,40])
-
-        # 2D slice of the reconstruction
-        print(arr.shape, np.amax(arr), np.amin(arr))
-        # self.graphWidget.axes.imshow(arr[:, :, 0])
-        # divider = make_axes_locatable(self.graphWidget.axes)
-        # cax = divider.append_axes('top', size='5%', pad=0.05)
-        im = self.graphWidget.axes.imshow(arr[:, :, 0], cmap='Greys')
-        self.graphWidget.fig.colorbar(im)#, cax=cax, orientation='vertical')
 
 
 class Gui(QtWidgets.QMainWindow):
@@ -799,48 +762,11 @@ class Gui(QtWidgets.QMainWindow):
         self.append_history(f'ANGLE: {self.angle}')
 
     def exec_show_3d_btn2(self):
-        dialog = Dialog(self.recon_3d.output)
-        dialog.exec_()
+        print('Not implemented yet')
+        return
 
     def exec_show_3d_btn(self):
-        w = gl.GLViewWidget()
-        # w.orbit(250, 260)
-        # w.setCameraPosition(0, 0, 0)  # this does not work.
-        w.show()
-        w.setWindowTitle('3D Projection: GLVolumeItem')
-        w.setCameraPosition(distance=200)
-
-        # g = gl.GLGridItem()
-        # g.scale(10, 10, 1)
-        # w.addItem(g)
-        # data = np.random.random(125).reshape(5,5,5)
-        data = self.recon_3d.output
-        positive = np.log(np.clip(data, 0, data.max())**2)
-        negative = np.log(np.clip(-data, 0, -data.min())**2)
-        positive = positive * (255./positive.max())
-        negative = negative * (255./negative.max())
-        positive[np.isinf(positive)] = 0
-        negative[np.isinf(negative)] = 0
-
-        d2 = np.empty(data.shape + (4,), dtype=np.ubyte)
-        d2[..., 0] = positive.astype(int) % 256
-        d2[..., 1] = negative.astype(int) % 256
-        d2[..., 2] = d2[..., 1]
-        d2[..., 3] = d2[..., 0]*0.3 + d2[..., 1]*0.3
-        d2[..., 3] = (d2[..., 3].astype(float) / 255.)**2 * 255
-
-        # RGB orientation lines (optional)
-        d2[:, 0, 0] = [255, 0, 0, 255]
-        d2[0, :, 0] = [0, 255, 0, 255]
-        d2[0, 0, :] = [0, 0, 255, 255]
-
-        v = gl.GLVolumeItem(d2, sliceDensity=1, smooth=False,
-                            glOptions='translucent')
-        v.translate(-1000, -1000, -1000)
-        w.addItem(v)
-
-        ax = gl.GLAxisItem()
-        w.addItem(ax)
+        print('Not implemented yet')
 
     def _set_opt_step(self):
         if not self.motor_on:
