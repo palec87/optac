@@ -16,3 +16,7 @@ class BoardInitFailed(Error):
 class MotorInitFailed(Error):
     """Raised when motor init fails"""
     pass
+
+class FallingBackException(Error):
+    print('bright correction not defined, correcting \
+          to the average of the four corner of the stack')

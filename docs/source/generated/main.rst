@@ -23,9 +23,7 @@
 
    .. autosummary::
    
-      Dialog
       Gui
-      MplCanvas
    
    
 

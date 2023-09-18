@@ -29,11 +29,19 @@ __license__ = 'GPL'
                 [0, 1, 0, 1, 0],
                 [1, 0, 1, 0, 1]]),
     ),
+    # should not be able to go negative
+    (np.ones(20).reshape(4,-1),
+     np.array([[0, 1, 0, 1, 0],
+                [1, 0, 1, 0, 1],
+                [0, 1, 0, 1, 0],
+                [1, 0, 1, 0, 1]]),
+     np.zeros(20).reshape(4,-1),
+    ),
      ])
 def test_dark_corr(dark_img, measured_img, expected):
     corr = Correct(dark=dark_img)
     dcorr = corr.correct_dark(measured_img)
-    assert dcorr.all() == expected.all()
+    np.testing.assert_array_equal(dcorr, expected)
 
 
 @pytest.mark.parametrize(
@@ -71,6 +79,4 @@ def test_hot_corr(hot_img, measured_img, std_mult, expected):
     corr = Correct(hot=hot_img, std_mult=std_mult)
     print('Hot pixels', corr.hot_pxs)
     dcorr = corr.correct_hot(measured_img)
-
-    print(dcorr)
-    assert dcorr.all() == expected.all()
+    np.testing.assert_array_equal(dcorr, expected)

@@ -30,11 +30,6 @@ import json
 import numpy as np
 from functools import partial
 
-import matplotlib
-matplotlib.use('Qt5Agg')
-from matplotlib.figure import Figure
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtGui import QPixmap
 from gui.optac_ui import Ui_MainWindow

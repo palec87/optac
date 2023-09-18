@@ -20,6 +20,7 @@ Welcome to OPTac's documentation!
    camera_class
    motor_class
    corrections
+   img_processing
 
 
 

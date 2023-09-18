@@ -33,6 +33,8 @@ Notes:
 '''
 
 import numpy as np
+from helpers.img_processing import norm_img, img_to_int_type
+from helpers.exceptions import FallingBackException
 
 class Correct(object):
     """Correcting raw data from 2D array acquisitions. Currently implemented
@@ -133,7 +135,8 @@ class Correct(object):
 
 
     def correct_dark(self, img):
-        """Subtract dark image from the img
+        """Subtract dark image from the img.
+        TODO: treating if dark correction goes negative??
 
         Args:
             img (np.array): Img to be corrected
@@ -167,54 +170,82 @@ class Correct(object):
 
         # direct correction or bright needs to be first corrected with dark and hot pixels.
         try:
-            self.bright_corr = self.norm_img(self.bright_corr)
+            self.bright_corr = norm_img(self.bright_corr)
         except:
             print('Probably bright is not yet dark and hot corrected, tyring that')
             self.bright_corr = self.correct_dark(self.bright)  # this could be done only once
 
             self.bright_corr = self.correct_hot(self.bright_corr)  # this too
-            self.bright_corr = self.norm_img(self.bright_corr)
+            self.bright_corr = norm_img(self.bright_corr)
 
         return img / self.bright_corr
+    
 
-
-    def norm_img(self, img: np.array, ret_type='float') -> np.array:
-        """Normalize np.array image to 1.
-
-        Args:
-            img (np.array): img to normalize
-            ret_type (str, optional): result can be casted to any valid dtype. Defaults to 'float'.
-
-        Returns:
-            np.array: normalized array to 1
-        """
-        return img/np.amax(img) if ret_type == 'float' else (img/np.amax(img)).astype(ret_type)
-
-
-    def img_to_inttype(self, img:np.array, dtype:np.dtype=np.int16) -> np.array:
-        """After corrections, resulting array can be dtype float. Two steps are
-        taken here. First convert to a chosed dtype and then clip values as if it
-        was unsigned int, which the images are.shape
+    def correct_int(self, img_stack:np.array, mode='integral', use_bright=True, rect_dim=50):
+        """OPT intensity correction over the stack of projections, preferable 
+        corrected for dark, bright, and hot pixels
 
         Args:
-            img (np.array): img to convert
-            dtype (np.dtype): either np.int8 or np.int16 currently, Defaults to np.int16
+            img_stack (np.array): 3D array of images, third dimension is along angles
+            mode (str, optional): correction mode, only available is integral. Defaults to 'integral'.
+            use_bright (bool, optional): if bright field acquisition is a ref to scale images. Defaults to True.
+            rect_dim (int, optional): size of rectabgles in the corners in pixels. Defaults to 50.
 
         Raises:
-            NotImplementedError: dtype not implemented
+            NotImplementedError: Checking available correction modes
 
         Returns:
-            np.array: array as int
+            np.array: 3D array of the same shape as the img_stack, but intensity corrected
         """
-        ans = img.astype(dtype)
-        if dtype == np.int8:
-            ans = np.clip(ans, 0, 255)
-        elif dtype == np.int16:
-            ans = np.clip(ans, 0, 2**16 - 1)  # 4095 would be better for 12bit camera
+        # do I want to correct in respect to the bright field
+        # basic idea is four corners, integrated
+        # second idea, fit a correction plane into the four corners.
+        if use_bright is True and self.bright is not None:
+            # four corners of the bright
+            ref = ((self.bright[:50, :50]), 
+                   (self.bright[:50, -50:]),
+                   (self.bright[-50:, :50]),
+                   (self.bright[-50:, -50:]),
+                   )
         else:
-            raise NotImplementedError(f'{dtype} not implemented.')
-        
-        return ans
+            print('Using avg of the corners in the img stack as ref')
+            # assuming the stacks 3rd dimension is the right one.
+            # mean over steps in the aquisition
+            ref = ((np.mean(img_stack[:50, :50, :], axis=2)), 
+                   (np.mean(img_stack[:50, -50:, :], axis=2)),
+                   (np.mean(img_stack[-50:, :50], axis=2)),
+                   (np.mean(img_stack[-50:, -50:], axis=2)),
+                   )
+            
+        print('shape ref[0]:', ref[0].shape)
+            
+        # integral takes sum over pixels of interest
+        if mode=='integral':
+            # sum of all pixels over all four squares
+            # this is one number
+            self.ref = np.mean([np.mean(k) for k in ref])
+        else:
+            raise NotImplementedError
+
+        # correct the stack
+        corr_stack = np.empty(img_stack.shape)
+
+        # intensity numbers for img in the stack (sum over regions of interests)
+        stack_int = []
+        for i in range(img_stack.shape[2]):
+            # two means are not a clean solution
+            # as long as the rectangles ar the same, it is equivalent
+            img_int = np.mean((np.mean(img_stack[:50, :50, i]),
+                              np.mean(img_stack[:50, -50:, i]),
+                              np.mean(img_stack[-50:, :50, i]),
+                              np.mean(img_stack[-50:, -50:, i]),
+            ))
+            stack_int.append(img_int)
+            corr_stack[:, :, i] = (img_stack[:, :, i] / img_int) * self.ref
+
+        # stored in order to tract the stability fluctuations.
+        self.stack_int = np.array(stack_int)
+        return corr_stack
 
 
     def correct_all(self, img: np.array, mode_hot='n4') -> np.array:
@@ -242,7 +273,7 @@ class Correct(object):
 
         # step 2
         self.bright_corr = self.correct_hot(self.bright_corr, mode=mode_hot)  # this too
-        self.bright_corr = self.norm_img(self.bright_corr)
+        self.bright_corr = norm_img(self.bright_corr)
 
         # step 3
         self.img_corr = self.correct_bright(self.img_corr)
@@ -251,6 +282,6 @@ class Correct(object):
         self.img_corr = self.correct_hot(self.img_corr)
 
         # step 5, make sure it is the same integer type as original img.
-        self.img_corr = self.img_to_inttype(self.img_corr, img_format)
+        self.img_corr = img_to_int_type(self.img_corr, img_format)
         
         return self.img_corr
