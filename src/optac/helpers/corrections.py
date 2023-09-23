@@ -33,7 +33,10 @@ Notes:
 '''
 
 import numpy as np
-from helpers.img_processing import norm_img, img_to_int_type
+from helpers.img_processing import (
+    norm_img, img_to_int_type, is_positive,
+)
+
 from helpers.exceptions import FallingBackException
 
 class Correct(object):
@@ -50,6 +53,7 @@ class Correct(object):
     """
     def __init__(self, hot=None, std_mult=7, dark=None, bright=None):
         self.hot = hot
+        self.hot_pxs = None
         self.std_mult = std_mult
 
         self.dark = dark
@@ -59,7 +63,7 @@ class Correct(object):
         self.bright_corr = None
 
         if hot is not None:
-            self.get_hot_pxs()
+            self.hot_pxs = self.get_hot_pxs()
 
 
     def get_hot_pxs(self):
@@ -76,10 +80,18 @@ class Correct(object):
                                 self.hot, 
                                 self.mean + self.std_mult * self.std,
                                 )
+        
         hot_pxs = []
+
+        # if mask did not get any hot pixels, return empty list
+        if np.all(self.mask.mask == False):
+            print('No hot pixels identified')
+            return hot_pxs
+
+        # otherwise iterate over the mask and append hot pixels to the list
         for j, k in zip(*np.where(self.mask.mask)):
             hot_pxs.append((j, k))
-        self.hot_pxs = hot_pxs
+        return hot_pxs
 
     def correct_hot(self, img, mode='n4'):
         """Correct hot pixels from its neighbour pixel values. It ignores the
@@ -97,6 +109,14 @@ class Correct(object):
         Returns:
             np.array: Corrected img array
         """
+
+        if self.hot_pxs is None:
+            raise RuntimeError('You must have hot pixel acquisition and run get_hot_pxs()')
+        
+        if self.hot_pxs == []:
+            print('No hot pixels identified, nothing to correct')
+            return img
+
         # check if the shapes of the correction and image match
         if self.hot.shape != img.shape:
             raise IndexError('images do not have the same shape')
@@ -131,6 +151,12 @@ class Correct(object):
                 neigh_vals.append(img[px[0], px[1]])
 
             ans[hot_px] = int(np.mean(neigh_vals))
+
+        # test for negative values
+        is_positive(ans)
+
+        # cast it on correct dtype
+        ans = img_to_int_type(ans, dtype=ans.dtype)
         return ans
 
 
@@ -150,7 +176,15 @@ class Correct(object):
         if self.dark.shape != img.shape:
             raise IndexError('images do not have the same shape')
         
-        return img - self.dark
+        # correction
+        ans = img - self.dark
+
+        # test for negative values
+        is_positive(ans)
+        
+        # cast it on correct dtype
+        ans = img_to_int_type(ans,  dtype=img.dtype)
+        return ans
 
 
     def correct_bright(self, img: np.array) -> np.array:
@@ -178,7 +212,14 @@ class Correct(object):
             self.bright_corr = self.correct_hot(self.bright_corr)  # this too
             self.bright_corr = norm_img(self.bright_corr)
 
-        return img / self.bright_corr
+        ans = img / self.bright_corr
+
+        # test for negative values
+        is_positive(ans)
+
+        # cast it on correct dtype
+        ans = img_to_int_type(ans, dtype=img.dtype)
+        return ans
     
 
     def correct_int(self, img_stack:np.array, mode='integral', use_bright=True, rect_dim=50):
@@ -211,40 +252,55 @@ class Correct(object):
             print('Using avg of the corners in the img stack as ref')
             # assuming the stacks 3rd dimension is the right one.
             # mean over steps in the aquisition
-            ref = ((np.mean(img_stack[:50, :50, :], axis=2)), 
-                   (np.mean(img_stack[:50, -50:, :], axis=2)),
-                   (np.mean(img_stack[-50:, :50], axis=2)),
-                   (np.mean(img_stack[-50:, -50:], axis=2)),
+            ref = ((np.mean(img_stack[:, :50, :50], axis=0)), 
+                   (np.mean(img_stack[:, :50, -50:], axis=0)),
+                   (np.mean(img_stack[:, -50:, :50], axis=0)),
+                   (np.mean(img_stack[:, -50:, -50:], axis=0)),
                    )
             
-        print('shape ref[0]:', ref[0].shape)
+        print('shape ref:', [k.shape for k in ref])
             
         # integral takes sum over pixels of interest
         if mode=='integral':
             # sum of all pixels over all four squares
             # this is one number
             self.ref = np.mean([np.mean(k) for k in ref])
+        elif mode=='integral_bottom':
+            self.ref = np.mean([np.mean(ref[2]), np.mean(ref[3])])
         else:
             raise NotImplementedError
 
         # correct the stack
-        corr_stack = np.empty(img_stack.shape)
+        corr_stack = np.empty(img_stack.shape, dtype=img_stack.dtype)
 
         # intensity numbers for img in the stack (sum over regions of interests)
         stack_int = []
-        for i in range(img_stack.shape[2]):
+        for i, img in enumerate(img_stack):
             # two means are not a clean solution
             # as long as the rectangles ar the same, it is equivalent
-            img_int = np.mean((np.mean(img_stack[:50, :50, i]),
-                              np.mean(img_stack[:50, -50:, i]),
-                              np.mean(img_stack[-50:, :50, i]),
-                              np.mean(img_stack[-50:, -50:, i]),
-            ))
+            if mode=='integral':
+                img_int = np.mean((np.mean(img[:50, :50]),
+                                np.mean(img[:50, -50:]),
+                                np.mean(img[-50:, :50]),
+                                np.mean(img[-50:, -50:]),
+                ))
+            elif mode=='integral_bottom':
+                img_int = np.mean((
+                                np.mean(img[-50:, :50]),
+                                np.mean(img[-50:, -50:]),
+                ))
             stack_int.append(img_int)
-            corr_stack[:, :, i] = (img_stack[:, :, i] / img_int) * self.ref
+            corr_stack[i] = (img / img_int) * self.ref
+            print(i, end='\r')
 
         # stored in order to tract the stability fluctuations.
         self.stack_int = np.array(stack_int)
+
+        # test for negative values
+        is_positive(corr_stack)
+
+        # cast it on correct dtype
+        corr_stack = img_to_int_type(corr_stack, dtype=corr_stack.dtype)
         return corr_stack
 
 
@@ -265,7 +321,7 @@ class Correct(object):
             np.array: Fully corrected image, also casted to the original dtype
         """
         # TODO: this leads to repetition of steps I think
-        img_format = img.dtype()
+        img_format = img.dtype
 
         # step 1
         self.img_corr = self.correct_dark(img)

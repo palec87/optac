@@ -1229,16 +1229,11 @@ class Gui(QtWidgets.QMainWindow):
             np.savetxt(file_path, self.current_frame.frame)
         else:
             print(f"saving {fname + '.tiff'} in {self.img_format} format.")
-#             print(f'Counts of to_save: {np.amax(to_save)}, mean counts: {np.mean(to_save)}')
-#             print(f'std counts: {np.std(to_save)}')
+#             print(f'counts of Frame: {np.amax(self.current_frame.frame)}, \
+# mean counts: {np.mean(self.current_frame.frame)}')
+#             print(f'std counts: {np.std(self.current_frame.frame)}')
 #             print('HISTOGRAM')
-#             bins = [0, 0.5, 0.9, 1, 1.2, 1.5, 2, 5, 10, 20]
-#             print(np.histogram(to_save, bins=bins))
-            print(f'counts of Frame: {np.amax(self.current_frame.frame)}, \
-mean counts: {np.mean(self.current_frame.frame)}')
-            print(f'std counts: {np.std(self.current_frame.frame)}')
-            print('HISTOGRAM')
-            print(np.histogram(self.current_frame.frame))
+#             print(np.histogram(self.current_frame.frame))
             file_path = os.path.join(self.exp_path, fname+'.tiff')
             cv2.imwrite(file_path, self.current_frame.frame)
 
@@ -1298,7 +1293,7 @@ mean counts: {np.mean(self.current_frame.frame)}')
             self.save_image()
 
         if self.cont_opt and self.save_opt:
-            self.save_image(str(self.frame_count))
+            self.save_image(f'{self.frame_count:04d}')
 
         self._frame_count_set(self.frame_count+1)
         self.post_ac_ready.emit(True)

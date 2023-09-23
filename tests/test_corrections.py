@@ -77,6 +77,26 @@ def test_dark_corr(dark_img, measured_img, expected):
      ])
 def test_hot_corr(hot_img, measured_img, std_mult, expected):
     corr = Correct(hot=hot_img, std_mult=std_mult)
-    print('Hot pixels', corr.hot_pxs)
     dcorr = corr.correct_hot(measured_img)
     np.testing.assert_array_equal(dcorr, expected)
+
+@pytest.mark.parametrize(
+    'hot_img, std_mult, expected',
+    [(np.array([[1, 2, 1, 2, 1],
+                [2, 1, 2, 1, 2],
+                [1, 2, 20, 2, 1],
+                [2, 1, 2, 1, 2]]),
+      4,
+      [(2, 2)],
+     ),
+     (np.array([[1, 2, 1, 2, 1],
+                [2, 1, 2, 1, 2],
+                [1, 2, 10, 2, 1],
+                [2, 1, 2, 1, 2]]),
+      5,
+      [],
+      ),
+    ])
+def test_get_hot_pixels(hot_img, std_mult, expected):
+    corr = Correct(hot=hot_img, std_mult=std_mult)
+    assert corr.hot_pxs == expected

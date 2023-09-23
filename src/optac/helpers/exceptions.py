@@ -18,5 +18,7 @@ class MotorInitFailed(Error):
     pass
 
 class FallingBackException(Error):
-    print('bright correction not defined, correcting \
-          to the average of the four corner of the stack')
+
+    def __init__(self, message=None):
+        self.message = message
+        super().__init__(self.message)
