@@ -1,0 +1,355 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>control.motor_class &#8212; OPTac 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Corrections" href="../corrections.html" />
+    <link rel="prev" title="Motor class" href="../motor_class.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-control.motor_class">
+<span id="control-motor-class"></span><h1>control.motor_class<a class="headerlink" href="#module-control.motor_class" title="Permalink to this heading">¶</a></h1>
+<p>Interface to the stepper motors</p>
+<ol class="arabic simple">
+<li><p>First download Telemetrix4Arduino library via Arduino IDE</p></li>
+<li><p>do Examples -&gt; Telemetrix4Arduino -&gt; Telemetrix4Arduino</p></li>
+</ol>
+<p>Small motor which comes with Arduino starting kit (28BYJ-48) is
+denoted as arduino_stepper</p>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#control.motor_class.main" title="control.motor_class.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Classes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#control.motor_class.Stepper" title="control.motor_class.Stepper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Stepper</span></code></a>(motor_type[, speed, distance, acc, ...])</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="control.motor_class.Stepper">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">control.motor_class.</span></span><span class="sig-name descname"><span class="pre">Stepper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">motor_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">speed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wait_const</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="control.motor_class.Stepper._exit">
+<span class="sig-name descname"><span class="pre">_exit</span></span><a class="headerlink" href="#control.motor_class.Stepper._exit" title="Permalink to this definition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id1"><span class="problematic" id="id2">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.add_count">
+<span class="sig-name descname"><span class="pre">add_count</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.add_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>add move count after move finished</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.current_position_callback">
+<span class="sig-name descname"><span class="pre">current_position_callback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.current_position_callback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current position data in form of
+motor_id, current position in steps, time_stamp</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.get_position">
+<span class="sig-name descname"><span class="pre">get_position</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.get_position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get current absolute position of the motor.
+Position can be reset (set to 0) by reset_postion()</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>int: position in steps, typically 0-2048 for 4 phase stepper.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.init_board">
+<span class="sig-name descname"><span class="pre">init_board</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.init_board" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.init_motor">
+<span class="sig-name descname"><span class="pre">init_motor</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.init_motor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Motor initialization</p>
+<dl class="simple">
+<dt>Raises:</dt><dd><p>ValueError: if unknown motor type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.is_running_callback">
+<span class="sig-name descname"><span class="pre">is_running_callback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.is_running_callback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if motor is running</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.move">
+<span class="sig-name descname"><span class="pre">move</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.move" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move the stepper motor and keep cheking the
+for the running is over in the while loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.move_absolute">
+<span class="sig-name descname"><span class="pre">move_absolute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">position</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.move_absolute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move to absolute position relative to the position
+saved position 0, defined either at init or reset by user
+from the GUI</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>position (init): Position in steps (typically -2048:2048)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.move_over_callback">
+<span class="sig-name descname"><span class="pre">move_over_callback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.move_over_callback" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.move_relative">
+<span class="sig-name descname"><span class="pre">move_relative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dist</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.move_relative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move relative distance from current position</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>dist (int): Distance in steps</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.reset_move_counter">
+<span class="sig-name descname"><span class="pre">reset_move_counter</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.reset_move_counter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Counting moves. Can be used for internal checking
+but currently not querried from the gui</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.reset_position">
+<span class="sig-name descname"><span class="pre">reset_position</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.reset_position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset zero position which is used for absolute
+movements</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.rotation_abs_over">
+<span class="sig-name descname"><span class="pre">rotation_abs_over</span></span><a class="headerlink" href="#control.motor_class.Stepper.rotation_abs_over" title="Permalink to this definition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id3"><span class="problematic" id="id4">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.rotation_rel_over">
+<span class="sig-name descname"><span class="pre">rotation_rel_over</span></span><a class="headerlink" href="#control.motor_class.Stepper.rotation_rel_over" title="Permalink to this definition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id5"><span class="problematic" id="id6">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.set_accel">
+<span class="sig-name descname"><span class="pre">set_accel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">acc</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.set_accel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.set_max_speed">
+<span class="sig-name descname"><span class="pre">set_max_speed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">speed</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.set_max_speed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set maximum speed of the given motor</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.set_speed">
+<span class="sig-name descname"><span class="pre">set_speed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">speed</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.set_speed" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.set_wait_const">
+<span class="sig-name descname"><span class="pre">set_wait_const</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">const</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.set_wait_const" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.shutdown">
+<span class="sig-name descname"><span class="pre">shutdown</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shutdown board
+TODO: what if in continuous movement, or lost communication?</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.start_cmove">
+<span class="sig-name descname"><span class="pre">start_cmove</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.start_cmove" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move the stepper motor and keep cheking the
+for the running is over in the while loop.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.start_rotate">
+<span class="sig-name descname"><span class="pre">start_rotate</span></span><a class="headerlink" href="#control.motor_class.Stepper.start_rotate" title="Permalink to this definition">¶</a></dt>
+<dd><p>pyqtSignal(<a href="#id7"><span class="problematic" id="id8">*</span></a>types, name: str = …, revision: int = …, arguments: Sequence = …) -&gt; PYQT_SIGNAL</p>
+<p>types is normally a sequence of individual types.  Each type is either a
+type object or a string that is the name of a C++ type.  Alternatively
+each type could itself be a sequence of types each describing a different
+overloaded signal.
+name is the optional C++ name of the signal.  If it is not specified then
+the name of the class attribute that is bound to the signal is used.
+revision is the optional revision of the signal that is exported to QML.
+If it is not specified then 0 is used.
+arguments is the optional sequence of the names of the signal’s arguments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.step_motor_example">
+<span class="sig-name descname"><span class="pre">step_motor_example</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.step_motor_example" title="Permalink to this definition">¶</a></dt>
+<dd><p>Only used for example script to move motor from the motor
+python CLI based on user integer input for relative stepping.
+Exit the script with ‘exit’ command.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="control.motor_class.Stepper.stop_moving">
+<span class="sig-name descname"><span class="pre">stop_moving</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.Stepper.stop_moving" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="control.motor_class.main">
+<span class="sig-prename descclassname"><span class="pre">control.motor_class.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#control.motor_class.main" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">OPTac</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acquisition.html">Acquisition manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../app.html">OPTac</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optac_main.html">GUI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../opt_class.html">OPT class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../camera_class.html">Camera</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../motor_class.html">Motor class</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">control.motor_class</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../corrections.html">Corrections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../img_processing.html">Image processing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../motor_class.html">Motor class</a><ul>
+      <li>Previous: <a href="../motor_class.html" title="previous chapter">Motor class</a></li>
+      <li>Next: <a href="../corrections.html" title="next chapter">Corrections</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, David Palecek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.0.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/generated/control.motor_class.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

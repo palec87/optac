@@ -1,0 +1,258 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>Hardware &#8212; OPTac 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Acquisition manual" href="acquisition.html" />
+    <link rel="prev" title="Welcome to OPTac’s documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="hardware">
+<h1>Hardware<a class="headerlink" href="#hardware" title="Permalink to this heading">¶</a></h1>
+<p>Items in each section ordered by performance.</p>
+<p>Even if you are a hobby builder with low price limits, OTPac offers support for <em>very</em> cheap combination of the hardware:</p>
+<ol class="simple">
+<li><p><a class="reference external" href="https://www.amazon.com/Microscope-Skybasic-Magnification-Compatible-Smartphone/dp/B07DVFBVPF?th=1">Sky basics</a> camera for 40$.</p></li>
+<li><p>Small stepper motor controlled via arduino for the total of less thatn 30$.</p></li>
+</ol>
+<section id="light-sources">
+<h2>Light sources<a class="headerlink" href="#light-sources" title="Permalink to this heading">¶</a></h2>
+</section>
+<section id="cameras">
+<h2>Cameras<a class="headerlink" href="#cameras" title="Permalink to this heading">¶</a></h2>
+<section id="sky-basics">
+<h3><a class="reference external" href="https://www.amazon.com/Microscope-Skybasic-Magnification-Compatible-Smartphone/dp/B07DVFBVPF?th=1">Sky basics</a><a class="headerlink" href="#sky-basics" title="Permalink to this heading">¶</a></h3>
+<p><em>Setup</em>
+Connect camera via the USB cable and you can right away capture the stream via e.g. OBS studio or in the case of OPTac via cv2 python module.</p>
+<p><em>Camera Features</em></p>
+<ul class="simple">
+<li><p>USB simple setup, possible wi-fi too.</p></li>
+<li><p>8 bit dynamic range.</p></li>
+<li><p>RGB chip, so you can separate channels.</p></li>
+<li><p>Bad objective, focusing out of the optical axis</p></li>
+<li><p>auto-exposure, so hard to correct and calibrate.</p></li>
+</ul>
+</section>
+<section id="phonefix">
+<h3><a class="reference external" href="https://pt.aliexpress.com/item/32888369526.html?gatewayAdapt=glo2bra">Phonefix</a><a class="headerlink" href="#phonefix" title="Permalink to this heading">¶</a></h3>
+<p>Note that the link above contains whlole setup, necessary is only camera and the C mount objective.</p>
+<p>This camera has VGA/HDMI interface, which means it serves purely as an output device with intention to connect directly to a screen or other type of display. Your PC HDMI/VGA ports are also output connectors and cannot be used directly to receive/stream data from the phonefix camera.</p>
+<p>Therefore, a <a class="reference external" href="https://www.ign.com/articles/best-capture-card">capture card</a> for streming videos is necessary. Cheap option can be around 20$.</p>
+<p><em>Setup</em>
+Connect VGA or HDMI camera output to the acquisition card and connect the card via USB to the PC. From this point, camera behaves basically the same as any other USB camera.</p>
+<p><em>Camera features</em></p>
+<ul class="simple">
+<li><p>1920x1080p, RGB chip</p></li>
+<li><p>50/60 frame rate</p></li>
+<li><p>Objective good in comparison to the Sky basic camera.</p></li>
+</ul>
+</section>
+<section id="dmk">
+<h3>DMK<a class="headerlink" href="#dmk" title="Permalink to this heading">¶</a></h3>
+<p>The Imagingsource cameras based on chips from sony (current CMOS workhorse). Different chips with diffrent specs are available in this so called industrial grade cameras. Typical price is few hundrets of $, imagingsource supposedly providing impecable support in terms of interfacing and designing custom applications.</p>
+<p><em>Setup</em>
+Connect USB to the PC and you are good to go. This camera provides more control via the serial port.</p>
+<p><em>Settings</em></p>
+<p><em>Camera features (DMK 37BUX252)</em></p>
+<ul class="simple">
+<li><p>monochrome 12 bit dynamic range</p></li>
+<li><p>upto 120 frame rate</p></li>
+<li><p>1/1.8 inch chip size</p></li>
+<li><p>2048 x 1536 px</p></li>
+<li><p>Global shutter</p></li>
+<li><p>3.45 um pixel size</p></li>
+</ul>
+</section>
+<section id="other-cameras">
+<h3>Other cameras<a class="headerlink" href="#other-cameras" title="Permalink to this heading">¶</a></h3>
+<p>If you have similar camera with different specs, there is a widget where you can try to interface it with the current methods called:</p>
+<p>TODO</p>
+</section>
+</section>
+<section id="stepper-motors">
+<h2>Stepper motors<a class="headerlink" href="#stepper-motors" title="Permalink to this heading">¶</a></h2>
+<section id="small-stepper-28byj-48">
+<h3>Small stepper (28BYJ-48)<a class="headerlink" href="#small-stepper-28byj-48" title="Permalink to this heading">¶</a></h3>
+<p>The most lowcost solution, no need for external power supply, but quite crappy revolution mostly unsuited for OPT. The unwanted feature is that the gear is not 1/64 for the 32 steps but ~63.7 degrees, meaning that full revolution is 2038 steps, nad not 2048, as one (me) would have thought. See the diagram below from the tutorial at <a class="reference external" href="https://lastminuteengineers.com/28byj48-stepper-motor-arduino-tutorial/">lastminuteengineers.com</a>:
+<img alt="gears for the 28BYJ-48" src="_images/small_stepper.png" />.</p>
+<section id="connection">
+<h4>Connection<a class="headerlink" href="#connection" title="Permalink to this heading">¶</a></h4>
+<p>The same tutorial also shows the full circuit connection:
+<img alt="Arduino + 28BYJ-48 circuit" src="_images/small_stepper_diagram.png" />.</p>
+<p>| Conn. type | arduino side | motor board side |
+| ———- | ———— | —————- |
+| Power:     | 5V           | +                |
+|            | GND          | -                |
+| Pins       | 8-11         | IN1-IN4 in this order |</p>
+<p>Connector from the motor to the board has only one orientation possible.
+Overall this should work:
+<img alt="Arduino + 28BYJ-48 circuit photo" src="_images/small_stepper_photo.jpg" />
+In the code the pins are assigned in the following manner:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">board</span> <span class="o">=</span> <span class="n">telemetrix</span><span class="o">.</span><span class="n">Telemetrix</span><span class="p">()</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">motor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">board</span><span class="o">.</span><span class="n">set_pin_mode_stepper</span><span class="p">(</span>
+                            <span class="n">interface</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                            <span class="n">pin1</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">pin2</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">pin3</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">pin4</span><span class="o">=</span><span class="mi">11</span><span class="p">,</span>
+                        <span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="st4118m1804-l">
+<h3>ST4118M1804-L<a class="headerlink" href="#st4118m1804-l" title="Permalink to this heading">¶</a></h3>
+<p>Nanotec good quality motor (74 Euros, <a class="reference external" href="https://en.nanotec.com/products/1271-st4118m1804-l">link</a>)
+<img alt="Nanotec specs" src="_images/nanotec_specs.png" /></p>
+<p>Control board with external 12V power supply is needed, for example Big Easy Driver from <a class="reference external" href="https://www.sparkfun.com/products/12859">here</a>. They have also a <a class="reference external" href="https://learn.sparkfun.com/tutorials/big-easy-driver-hookup-guide#hardware-overview">hookup guide</a> which I followed.</p>
+<p>Wire colours motor: A: brown, A-: orange, B:red, B-:yellow.</p>
+</section>
+</section>
+<section id="arduino-board">
+<h2>Arduino board<a class="headerlink" href="#arduino-board" title="Permalink to this heading">¶</a></h2>
+<p>In order to start with the arduino board, you have to install ‘Arduion IDE’ for a start and testing. Follow the instructions based on your OS from Arduino IDE docs <a class="reference external" href="https://docs.arduino.cc/software/ide-v1">here</a>.</p>
+<p>OPTac uses Telemetrix4Arduino library for Python, which you need to install onto your Arduino board via the IDE.</p>
+<ol class="simple">
+<li><p>download Telemetrix4Arduino library via Arduino IDE:</p>
+<ul class="simple">
+<li><p>Go to Tools -&gt; Manage libraries -&gt; and search telemetrix</p></li>
+<li><p>Install</p></li>
+</ul>
+</li>
+<li><p>You can test its functionality in two ways:</p>
+<ul class="simple">
+<li><p>There are several examples (after install) in Examples -&gt; Telemetrix4Arduino -&gt; Telemetrix4Arduino</p></li>
+<li><p>Or if you have an OPTac source code, in the examples folder are scripts which enable you to play with the board using telemetrix package. The examples are mostly based on the documentation examples of the author of telemetrix Alan Yorinks and can be found <a class="reference external" href="https://mryslab.github.io/telemetrix/">here</a>. In particular, to control the stepper motor, telemetrix interfaces AccelStepper library by Mike McCauley.</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="list-of-parts">
+<h2>List of parts<a class="headerlink" href="#list-of-parts" title="Permalink to this heading">¶</a></h2>
+<p>For the sake of simplicity (not price, or performance), all parts are from Thorlabs.</p>
+<ol class="simple">
+<li><p>Breadboard</p></li>
+<li><p>LED holder</p></li>
+</ol>
+<section id="transmission-mode">
+<h3>Transmission mode<a class="headerlink" href="#transmission-mode" title="Permalink to this heading">¶</a></h3>
+</section>
+<section id="photoluminescence-mode">
+<h3>Photoluminescence mode<a class="headerlink" href="#photoluminescence-mode" title="Permalink to this heading">¶</a></h3>
+<p>In addition to the transmission mode, you need:</p>
+<ol class="simple">
+<li><p>long pass filters needed to supress scattered excitation light.</p></li>
+<li><p>filter holder + optomechanics.</p></li>
+<li><p>Probably a box to block any ambient light.</p></li>
+</ol>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">OPTac</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Hardware</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#light-sources">Light sources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cameras">Cameras</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stepper-motors">Stepper motors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#arduino-board">Arduino board</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#list-of-parts">List of parts</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="acquisition.html">Acquisition manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="app.html">OPTac</a></li>
+<li class="toctree-l1"><a class="reference internal" href="optac_main.html">GUI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="opt_class.html">OPT class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="camera_class.html">Camera</a></li>
+<li class="toctree-l1"><a class="reference internal" href="motor_class.html">Motor class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="corrections.html">Corrections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="img_processing.html">Image processing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to OPTac’s documentation!</a></li>
+      <li>Next: <a href="acquisition.html" title="next chapter">Acquisition manual</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, David Palecek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.0.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/hardware.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

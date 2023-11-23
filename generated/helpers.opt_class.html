@@ -1,0 +1,366 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>helpers.opt_class &#8212; OPTac 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Camera" href="../camera_class.html" />
+    <link rel="prev" title="OPT class" href="../opt_class.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-helpers.opt_class">
+<span id="helpers-opt-class"></span><h1>helpers.opt_class<a class="headerlink" href="#module-helpers.opt_class" title="Permalink to this heading">¶</a></h1>
+<p>Classes which are a software backbone of the OPTac module and
+OPT acquisition in general.</p>
+<p>Other necessary classes are of course Camera and motor classes.</p>
+<p class="rubric">Classes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#helpers.opt_class.Data" title="helpers.opt_class.Data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Data</span></code></a>(frame, count, format)</p></td>
+<td><p>Class for processing chunks of frames comming from the camera Mostly averaging and software binning.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#helpers.opt_class.Opt" title="helpers.opt_class.Opt"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Opt</span></code></a>()</p></td>
+<td><p>Class which should allow to acquire OPT from the script, command line, or even Jupyter notebook.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#helpers.opt_class.Plot" title="helpers.opt_class.Plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Plot</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#helpers.opt_class.Recon" title="helpers.opt_class.Recon"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Recon</span></code></a>(n_steps, data)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="helpers.opt_class.Data">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">helpers.opt_class.</span></span><span class="sig-name descname"><span class="pre">Data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">format</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for processing chunks of frames comming from the camera
+Mostly averaging and software binning.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>Opt (class): _description_</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Data.update_frame">
+<span class="sig-name descname"><span class="pre">update_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Data.update_frame" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">helpers.opt_class.</span></span><span class="sig-name descname"><span class="pre">Opt</span></span><a class="headerlink" href="#helpers.opt_class.Opt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class which should allow to acquire OPT from the script,
+command line, or even Jupyter notebook.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.clear_sweep_data">
+<span class="sig-name descname"><span class="pre">clear_sweep_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.clear_sweep_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.create_saving_folder">
+<span class="sig-name descname"><span class="pre">create_saving_folder</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.create_saving_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create experiment saving folder in the data saving folder
+selected by user in the GUI. Method updates path attribute.
+Name of the folder is a datetime string.</p>
+<ol class="arabic simple">
+<li><p>Create the folder and report in the history tab</p></li>
+</ol>
+<p>Folder name is not optional and has unified format.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.frame_count_reset">
+<span class="sig-name descname"><span class="pre">frame_count_reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.frame_count_reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.get_camera_params">
+<span class="sig-name descname"><span class="pre">get_camera_params</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.get_camera_params" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.get_dark_field">
+<span class="sig-name descname"><span class="pre">get_dark_field</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.get_dark_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Actual dark-field acquisition</p>
+<ol class="arabic simple">
+<li><p>Define camera.set_average to current * 50</p></li>
+<li><p>Call start_acquire</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.get_date_now">
+<span class="sig-name descname"><span class="pre">get_date_now</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.get_date_now" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get current date and time which is
+used for the experimental metadata information</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>str: datetime from years to seconds</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.get_frame">
+<span class="sig-name descname"><span class="pre">get_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">avg</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.get_frame" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.get_frames">
+<span class="sig-name descname"><span class="pre">get_frames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">avg</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.get_frames" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.get_time_now">
+<span class="sig-name descname"><span class="pre">get_time_now</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.get_time_now" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get current time string, used for experimental
+metadata information.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>str: time H-M-S</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.init_camera">
+<span class="sig-name descname"><span class="pre">init_camera</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">res</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.init_camera" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.init_motor">
+<span class="sig-name descname"><span class="pre">init_motor</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.init_motor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.initialize_stepper">
+<span class="sig-name descname"><span class="pre">initialize_stepper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.initialize_stepper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a stepper motor.</p>
+<ol class="arabic simple">
+<li><p>Initialize or raise exception.</p></li>
+</ol>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.plot_frame">
+<span class="sig-name descname"><span class="pre">plot_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.plot_frame" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.plot_recon">
+<span class="sig-name descname"><span class="pre">plot_recon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.plot_recon" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.post_sweep">
+<span class="sig-name descname"><span class="pre">post_sweep</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.post_sweep" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.reconstruct">
+<span class="sig-name descname"><span class="pre">reconstruct</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.reconstruct" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.reset_counters">
+<span class="sig-name descname"><span class="pre">reset_counters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.reset_counters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.run_opt">
+<span class="sig-name descname"><span class="pre">run_opt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_sweeps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_frames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_averages</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.run_opt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.run_sweep">
+<span class="sig-name descname"><span class="pre">run_sweep</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.run_sweep" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.save_image">
+<span class="sig-name descname"><span class="pre">save_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.save_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saving frames as images or text files (in case accum shots
+is selected), which results in float numbers.</p>
+<ol class="arabic simple">
+<li><p>Create filename. Default file name is sweep_step_frame         numbers separated by ‘_’.</p></li>
+<li><p>If saving folder does not exist, create it.</p></li>
+<li><p>If/else for averaging vs accumulation of the frames modes.</p></li>
+</ol>
+<dl class="simple">
+<dt>Args:</dt><dd><p>fname (str, optional): file name, used in cases of
+saving calibrations etc. Defaults to None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.save_metadata">
+<span class="sig-name descname"><span class="pre">save_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.save_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saving metadata dictionary in json format into the
+data saving folder.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.set_live_recon">
+<span class="sig-name descname"><span class="pre">set_live_recon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#helpers.opt_class.Opt.set_live_recon" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.set_main_folder">
+<span class="sig-name descname"><span class="pre">set_main_folder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">folder_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.set_main_folder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.set_recon_idx">
+<span class="sig-name descname"><span class="pre">set_recon_idx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#helpers.opt_class.Opt.set_recon_idx" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.set_save_data">
+<span class="sig-name descname"><span class="pre">set_save_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#helpers.opt_class.Opt.set_save_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.step_count_reset">
+<span class="sig-name descname"><span class="pre">step_count_reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.step_count_reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.step_motor">
+<span class="sig-name descname"><span class="pre">step_motor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">speed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angle</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.step_motor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Opt.sweep_count_reset">
+<span class="sig-name descname"><span class="pre">sweep_count_reset</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Opt.sweep_count_reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="helpers.opt_class.Plot">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">helpers.opt_class.</span></span><span class="sig-name descname"><span class="pre">Plot</span></span><a class="headerlink" href="#helpers.opt_class.Plot" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Plot.plot_frame">
+<span class="sig-name descname"><span class="pre">plot_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">count</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Plot.plot_frame" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="helpers.opt_class.Recon">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">helpers.opt_class.</span></span><span class="sig-name descname"><span class="pre">Recon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.opt_class.Recon" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="helpers.opt_class.Recon.save_data">
+<span class="sig-name descname"><span class="pre">save_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#helpers.opt_class.Recon.save_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">OPTac</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acquisition.html">Acquisition manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../app.html">OPTac</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optac_main.html">GUI</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../opt_class.html">OPT class</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">helpers.opt_class</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../camera_class.html">Camera</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../motor_class.html">Motor class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../corrections.html">Corrections</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../img_processing.html">Image processing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../opt_class.html">OPT class</a><ul>
+      <li>Previous: <a href="../opt_class.html" title="previous chapter">OPT class</a></li>
+      <li>Next: <a href="../camera_class.html" title="next chapter">Camera</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, David Palecek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.0.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/generated/helpers.opt_class.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

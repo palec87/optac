@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>helpers.corrections &#8212; OPTac 0.0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Image processing" href="../img_processing.html" />
+    <link rel="prev" title="Corrections" href="../corrections.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-helpers.corrections">
+<span id="helpers-corrections"></span><h1>helpers.corrections<a class="headerlink" href="#module-helpers.corrections" title="Permalink to this heading">¶</a></h1>
+<p>Corrections module for the microscopy acquisition</p>
+<p>corrections available:</p>
+<ol class="arabic simple">
+<li><p>Dark-field correction</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Always applicable and should be always done</p></li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple">
+<li><p>Flat-field, ie bright-field correction</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Applicable only transmission measurements</p></li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple">
+<li><p>Hot pixel correction</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>Hot pixels identified from long exposure acquisition on the blocked camera</p></li>
+<li><p>Possible to correct as mean of 4 or 8 neighbours</p></li>
+<li><p>Might not be necessary for the transmission measurements</p></li>
+</ul>
+</div></blockquote>
+<ol class="arabic simple">
+<li><p>TODO: Intensity correction</p></li>
+</ol>
+<blockquote>
+<div><ul class="simple">
+<li><p>More crucial for the shorter exposure times (depends on which time-scale the light-source drifts.)</p></li>
+</ul>
+</div></blockquote>
+<p>Notes:</p>
+<ul class="simple">
+<li><p>Exposure on the dark and bright field corrections must be same and same as the experimental exposure.</p></li>
+<li><p>TODO: Need to ensure correct logic of the correction and their redefinition.</p></li>
+</ul>
+<p class="rubric">Classes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#helpers.corrections.Correct" title="helpers.corrections.Correct"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Correct</span></code></a>([hot, std_mult, dark, bright])</p></td>
+<td><p>Correcting raw data from 2D array acquisitions.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="helpers.corrections.Correct">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">helpers.corrections.</span></span><span class="sig-name descname"><span class="pre">Correct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std_mult</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dark</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bright</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.corrections.Correct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Correcting raw data from 2D array acquisitions. Currently implemented
+corrections are:</p>
+<ol class="arabic simple">
+<li><p>Dark-field</p></li>
+<li><p>Bright-field</p></li>
+<li><p>Hot-pixel correction</p></li>
+<li><p>Intensity correction.</p></li>
+</ol>
+<dl class="simple">
+<dt>Args:</dt><dd><p>object (object): general python object</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.corrections.Correct.correct_all">
+<span class="sig-name descname"><span class="pre">correct_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode_hot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'n4'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="headerlink" href="#helpers.corrections.Correct.correct_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform all available corrections for single np.array image.</p>
+<ol class="arabic simple">
+<li><p>subtract dark from img and white</p></li>
+<li><p>remove hot pixels from white</p></li>
+<li><p>correct white in the img</p></li>
+<li><p>remove hot pixels from img</p></li>
+</ol>
+<dl class="simple">
+<dt>Args:</dt><dd><p>img (np.array): img to correct
+mode_hot (str, optional): mode of selecting hot pixel neighbours. Defaults to ‘n4’.</p>
+</dd>
+<dt>Returns:</dt><dd><p>np.array: Fully corrected image, also casted to the original dtype</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.corrections.Correct.correct_bright">
+<span class="sig-name descname"><span class="pre">correct_bright</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="headerlink" href="#helpers.corrections.Correct.correct_bright" title="Permalink to this definition">¶</a></dt>
+<dd><p>Correct image using a bright-field correction image</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>img (np.arrays): Img to correct</p>
+</dd>
+<dt>Raises:</dt><dd><p>IndexError: If the shapes do not match</p>
+</dd>
+<dt>Returns:</dt><dd><p>np.array: Corrected image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.corrections.Correct.correct_dark">
+<span class="sig-name descname"><span class="pre">correct_dark</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.corrections.Correct.correct_dark" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subtract dark image from the img.
+TODO: treating if dark correction goes negative??</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>img (np.array): Img to be corrected</p>
+</dd>
+<dt>Raises:</dt><dd><p>IndexError: If the shapes do not match</p>
+</dd>
+<dt>Returns:</dt><dd><p>np.array: corrected image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.corrections.Correct.correct_hot">
+<span class="sig-name descname"><span class="pre">correct_hot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'n4'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.corrections.Correct.correct_hot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Correct hot pixels from its neighbour pixel values. It ignores the
+neighbour pixel if it was identified as hot pixel itself.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>img (np.array): image to be corrected.
+mode (str, optional): How to pick neighbours. Defaults to ‘n4’, up, bottom
+left, right. Other option is n8, which takes the diagonal neighbours too.</p>
+</dd>
+<dt>Raises:</dt><dd><p>IndexError: Raised if the hot_corr array does not match the shape of the input img.
+ValueError: invalid mode option</p>
+</dd>
+<dt>Returns:</dt><dd><p>np.array: Corrected img array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.corrections.Correct.correct_int">
+<span class="sig-name descname"><span class="pre">correct_int</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_stack</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'integral'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_bright</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rect_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cast_to_int</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#helpers.corrections.Correct.correct_int" title="Permalink to this definition">¶</a></dt>
+<dd><p>OPT intensity correction over the stack of projections, preferable 
+corrected for dark, bright, and hot pixels</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>img_stack (np.array): 3D array of images, third dimension is along angles
+mode (str, optional): correction mode, only available is integral. Defaults to ‘integral’.
+use_bright (bool, optional): if bright field acquisition is a ref to scale images. Defaults to True.
+rect_dim (int, optional): size of rectabgles in the corners in pixels. Defaults to 50.</p>
+</dd>
+<dt>Raises:</dt><dd><p>NotImplementedError: Checking available correction modes</p>
+</dd>
+<dt>Returns:</dt><dd><p>np.array: 3D array of the same shape as the img_stack, but intensity corrected</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="helpers.corrections.Correct.get_hot_pxs">
+<span class="sig-name descname"><span class="pre">get_hot_pxs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#helpers.corrections.Correct.get_hot_pxs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Identify hot pixels from the hot array based on the hot
+std_mutl facter threshold. Hot pixel has intensity greater than</p>
+<p>mean(img) + std_mult * std(img)</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">OPTac</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../hardware.html">Hardware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../acquisition.html">Acquisition manual</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../app.html">OPTac</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../optac_main.html">GUI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../opt_class.html">OPT class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../camera_class.html">Camera</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../motor_class.html">Motor class</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../corrections.html">Corrections</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">helpers.corrections</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../img_processing.html">Image processing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../corrections.html">Corrections</a><ul>
+      <li>Previous: <a href="../corrections.html" title="previous chapter">Corrections</a></li>
+      <li>Next: <a href="../img_processing.html" title="next chapter">Image processing</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, David Palecek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.0.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/generated/helpers.corrections.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
