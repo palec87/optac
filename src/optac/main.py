@@ -137,6 +137,7 @@ class Gui(QtWidgets.QMainWindow):
             self._update_motor_type
             )
         self.ui.motor_type_list.addItem('Uno-stepper')
+        self.ui.motor_type_list.addItem('nanotec')
 
         # camera settings
         self.ui.camera_type_list.currentIndexChanged.connect(
@@ -148,13 +149,23 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.camera_port.valueChanged.connect(self._update_camera_port)
         self.ui.camera_init_btn.clicked.connect(self.initialize_camera)
         self.ui.camera_prop_btn.clicked.connect(self._show_camera_settings)
+
+        # corrections
         self.ui.flat_field_btn.clicked.connect(self.exec_flat_field)
         self.ui.dark_field_btn.clicked.connect(self.exec_dark_field)
         self.ui.hot_pixels_btn.clicked.connect(self.exec_hot_pixels)
         self.ui.hot_pixel_std_multiple.valueChanged.connect(
             self._update_hot_std_mult,
             )
+        self.ui.corr_averages.valueChanged.connect(self._update_corr_averages)
+        
+        # snap camera
         self.ui.snap_dmk_btn.clicked.connect(self.snap_dmk)
+        # horizontal cut plot
+        self.ui.hline1_px.valueChanged.connect(self._update_hor_cut_pxs)
+        self.ui.hline2_px.valueChanged.connect(self._update_hor_cut_pxs)
+        self.ui.show_hlines.toggled.connect(self._update_show_hlines)
+
         # saving
         self.ui.save_image_btn.clicked.connect(self.exec_save_image_btn)
 
@@ -244,6 +255,12 @@ class Gui(QtWidgets.QMainWindow):
         self.min_hist = self.ui.min_hist.value()
         self.max_hist = self.ui.max_hist.value()
         self.hot_std = self.ui.hot_pixel_std_multiple.value()
+        self.corr_averages = self.ui.corr_averages.value()
+        # line plot
+        self.hline1_px = self.ui.hline1_px.value()
+        self.hline2_px = self.ui.hline2_px.value()
+        self.show_hlines = self.ui.show_hlines.isChecked()
+        # toggle hist
         self.toggle_hist = self.ui.toggle_hist.isChecked()
         self.camera_type = self.ui.camera_type_list.currentIndex()
         self.motor_type = self.ui.motor_type_list.currentIndex()
@@ -276,6 +293,10 @@ class Gui(QtWidgets.QMainWindow):
             self.ui.min_hist.setValue(d['min_hist'])
             self.ui.max_hist.setValue(d['max_hist'])
             self.ui.hot_pixel_std_multiple.setValue(d['hot_std'])
+            self.ui.corr_averages.setValue(d['corr_avgs'])
+            self.ui.hline1_px.setValue(d['hline1_px'])
+            self.ui.hline2_px.setValue(d['hline2_px'])
+            self.ui.show_hlines.setChecked(d['show_hlines'])
             self.ui.toggle_hist.setChecked(d['toggle_hist'])
             self.ui.camera_type_list.setCurrentIndex(d['camera_type_idx'])
             self.ui.motor_type_list.setCurrentIndex(d['motor_type_idx'])
@@ -314,6 +335,10 @@ class Gui(QtWidgets.QMainWindow):
         vals['min_hist'] = self.min_hist
         vals['max_hist'] = self.max_hist
         vals['hot_std'] = self.hot_std
+        vals['corr_avgs'] = self.corr_averages
+        vals['hline1_px'] = self.hline1_px
+        vals['hline2_px'] = self.hline2_px
+        vals['show_hlines'] = self.show_hlines
         vals['toggle_hist'] = self.toggle_hist
         vals['camera_type_idx'] = self.camera_type
         vals['motor_type_idx'] = self.motor_type
@@ -347,6 +372,10 @@ class Gui(QtWidgets.QMainWindow):
         self.ui.min_hist.setValue(1)
         self.ui.max_hist.setValue(250)
         self.ui.hot_pixel_std_multiple.setValue(7)
+        self.ui.corr_averages.setValue(30)
+        self.ui.hline1_px.setValue(100)
+        self.ui.hline2_px.setValue(1800)
+        self.ui.show_hlines.setChecked(False)
         self.ui.toggle_hist.setChecked(False)
         self.ui.camera_type_list.setCurrentIndex(0)
         self.ui.motor_type_list.setCurrentIndex(0)
@@ -371,6 +400,16 @@ class Gui(QtWidgets.QMainWindow):
 
     def _update_hot_std_mult(self):
         self.hot_std = self.ui.hot_pixel_std_multiple.value()
+
+    def _update_corr_averages(self):
+        self.corr_averages = self.ui.corr_averages.value()
+
+    def _update_hor_cut_pxs(self):
+        self.hline1_px = self.ui.hline1_px.value()
+        self.hline2_px = self.ui.hline2_px.value()
+
+    def _update_show_hlines(self):
+        self.show_hlines = self.ui.show_hlines.isChecked()
 
     def _update_camera_port(self):
         """
@@ -556,6 +595,8 @@ class Gui(QtWidgets.QMainWindow):
         self.motor_type = self.ui.motor_type_list.currentIndex()
         if self.motor_type == 0:
             self.motor = 'Uno-stepper'
+        elif self.motor_type == 1:
+            self.motor = 'nanotec'
         else:
             raise ValueError
 
@@ -679,10 +720,11 @@ class Gui(QtWidgets.QMainWindow):
         Returns:
             int: sys execution status.
         """
+        averages = 30
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setText("Block Camera")
-        text = "Acquire does 100 averages at current exposure time.\
+        text = f"Acquire does {averages} averages at current exposure time.\
             Exposure time MUST be the same as for the\
             experiment you are going to perform."
         msg.setInformativeText(" ".join(text.split()))
@@ -694,7 +736,7 @@ class Gui(QtWidgets.QMainWindow):
             partial(
                 self.acquire_correction,
                 corr_type='dark_field',
-                averages=100))
+                averages=averages))
         retval = msg.exec_()
         return retval
 
@@ -963,6 +1005,7 @@ class Gui(QtWidgets.QMainWindow):
         self.motor_thread = QtCore.QThread(parent=self)
         self.motor_thread.start()
         try:
+            print(self.motor)
             self.stepper = Stepper(self.motor,
                                    speed=self.motor_speed,
                                    wait_const=self.motor_wait)
@@ -1280,6 +1323,7 @@ class Gui(QtWidgets.QMainWindow):
             self.current_frame = Data(frame, no_frame_count, self.img_format)
 
         self.current_frame_plot()
+        self.current_hlines_plot()
 
         # check is stop is requested
         if self.stop_request is True:
@@ -1583,6 +1627,20 @@ class Gui(QtWidgets.QMainWindow):
         except Exception as e:
             self.append_history(f'Error Plotting Last Frame, {e}')
         return
+    
+    def current_hlines_plot(self):
+        if self.show_hlines is False:
+            return
+        
+        print(self.current_frame.frame.shape, self.hline1_px, self.hline2_px)
+
+        pen1 = pg.mkPen(color=(255, 0, 0))
+        pen2 = pg.mkPen(color=(0, 0, 255))
+        self.ui.hor_cut_plot.clear()
+        self.ui.hor_cut_plot.plot(self.current_frame.frame[self.hline1_px],
+                                  pen=pen1)
+        self.ui.hor_cut_plot.plot(self.current_frame.frame[self.hline2_px],
+                                  pen=pen2)
 
     def replot_rectangle(self):
         camera_v = self.ui.camera_live.getView()

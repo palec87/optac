@@ -47,6 +47,14 @@ class Stepper:
                         )
             self.set_max_speed(500)
             self.turning = False
+
+        elif self.motor_type == 'nanotec':
+            self.motor = self.board.set_pin_mode_stepper(
+                            interface=4,
+                            pin1=2, pin2=3, pin3=4, pin4=5,
+                        )
+            self.set_max_speed(500)
+            self.turning = False
         else:
             raise ValueError('Unrecognised type of stepper motor')
 
@@ -134,7 +142,8 @@ class Stepper:
 
 
 def main():
-    stepper = Stepper('28BYJ-48')
+    # stepper = Stepper('28BYJ-48')
+    stepper = Stepper('nanotec')
     stepper.step_motor()
     stepper.shutdown()
 

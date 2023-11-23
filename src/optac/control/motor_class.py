@@ -63,7 +63,20 @@ class Stepper(QObject):
                             pin1=8, pin2=10, pin3=9, pin4=11,
                         )
             self.set_max_speed(self.max_speed)
-            self.full_rotation = 2048  # steps
+            # self.full_rotation = 2048  # steps, this is wrong, gears are not precise
+            self.full_rotation = 2037
+            self.turning = False
+            self.board.stepper_set_current_position(
+                                        self.motor, 0)
+            self.get_position()
+        if self.motor_type == 'nanotec':
+            self.motor = self.board.set_pin_mode_stepper(
+                            interface=4,
+                            pin1=2, pin2=3, pin3=4, pin4=5,
+                        )
+            self.set_max_speed(self.max_speed)
+            # self.full_rotation = 2048  # steps, this is wrong, gears are not precise
+            self.full_rotation = 3200
             self.turning = False
             self.board.stepper_set_current_position(
                                         self.motor, 0)

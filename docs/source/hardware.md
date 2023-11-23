@@ -59,6 +59,41 @@ If you have similar camera with different specs, there is a widget where you can
 TODO
 
 ## Stepper motors
+### Small stepper (28BYJ-48)
+The most lowcost solution, no need for external power supply, but quite crappy revolution mostly unsuited for OPT. The unwanted feature is that the gear is not 1/64 for the 32 steps but ~63.7 degrees, meaning that full revolution is 2038 steps, nad not 2048, as one (me) would have thought. See the diagram below from the tutorial at [lastminuteengineers.com](https://lastminuteengineers.com/28byj48-stepper-motor-arduino-tutorial/):
+![gears for the 28BYJ-48](/figs/small_stepper.png "28BYJ-48").
+
+#### Connection
+The same tutorial also shows the full circuit connection:
+![Arduino + 28BYJ-48 circuit](/figs/small_stepper_diagram.png "28BYJ-48 diagram").
+
+| Conn. type | arduino side | motor board side |
+| ---------- | ------------ | ---------------- |
+| Power:     | 5V           | +                |
+|            | GND          | -                |
+| Pins       | 8-11         | IN1-IN4 in this order |
+
+Connector from the motor to the board has only one orientation possible.
+Overall this should work:
+![Arduino + 28BYJ-48 circuit photo](/figs/small_stepper_photo.jpg "28BYJ-48 diagram photo")
+In the code the pins are assigned in the following manner:
+
+```
+self.board = telemetrix.Telemetrix()
+self.motor = self.board.set_pin_mode_stepper(
+                            interface=4,
+                            pin1=8, pin2=10, pin3=9, pin4=11,
+                        )
+```
+
+### ST4118M1804-L
+Nanotec good quality motor (74 Euros, [link](https://en.nanotec.com/products/1271-st4118m1804-l))
+![Nanotec specs](/figs/nanotec_specs.png "nanotec_specs")
+
+Control board with external 12V power supply is needed, for example Big Easy Driver from [here](https://www.sparkfun.com/products/12859). They have also a [hookup guide](https://learn.sparkfun.com/tutorials/big-easy-driver-hookup-guide#hardware-overview) which I followed.
+
+Wire colours motor: A: brown, A-: orange, B:red, B-:yellow.
+
 
 ## Arduino board
 In order to start with the arduino board, you have to install 'Arduion IDE' for a start and testing. Follow the instructions based on your OS from Arduino IDE docs [here](https://docs.arduino.cc/software/ide-v1).

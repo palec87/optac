@@ -35,6 +35,12 @@ __license__ = 'GPL'
                 [1, 0, 1, 0, 1],
                 [0, 1, 0, 1, 0],
                 [1, 0, 1, 0, 1]]),
+     IndexError,
+    ),
+    (np.ones(20).reshape(4,-1),
+     np.array([[0, 1, 0, 1, 0],
+                [1, 0, 1, 0, 1],
+                [0, 1, 0, 1, 0]]),
      np.zeros(20).reshape(4,-1),
     ),
      ])
@@ -80,6 +86,7 @@ def test_hot_corr(hot_img, measured_img, std_mult, expected):
     dcorr = corr.correct_hot(measured_img)
     np.testing.assert_array_equal(dcorr, expected)
 
+
 @pytest.mark.parametrize(
     'hot_img, std_mult, expected',
     [(np.array([[1, 2, 1, 2, 1],
@@ -96,7 +103,10 @@ def test_hot_corr(hot_img, measured_img, std_mult, expected):
       5,
       [],
       ),
+    
     ])
 def test_get_hot_pixels(hot_img, std_mult, expected):
     corr = Correct(hot=hot_img, std_mult=std_mult)
     assert corr.hot_pxs == expected
+
+

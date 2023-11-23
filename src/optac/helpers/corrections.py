@@ -32,6 +32,7 @@ Notes:
 
 '''
 
+import sys, os
 import numpy as np
 from helpers.img_processing import (
     norm_img, img_to_int_type, is_positive,
@@ -46,7 +47,7 @@ class Correct(object):
     #. Dark-field
     #. Bright-field
     #. Hot-pixel correction
-    #. TODO: intensity correction.
+    #. Intensity correction.
 
     Args:
         object (object): general python object
@@ -208,8 +209,13 @@ class Correct(object):
         except:
             print('Probably bright is not yet dark and hot corrected, tyring that')
             self.bright_corr = self.correct_dark(self.bright)  # this could be done only once
-
-            self.bright_corr = self.correct_hot(self.bright_corr)  # this too
+            if self.hot is None:
+                pass
+            else:
+                try:
+                    self.bright_corr = self.correct_hot(self.bright_corr)  # this too
+                except TypeError:
+                    pass
             self.bright_corr = norm_img(self.bright_corr)
 
         ans = img / self.bright_corr
@@ -222,7 +228,8 @@ class Correct(object):
         return ans
     
 
-    def correct_int(self, img_stack:np.array, mode='integral', use_bright=True, rect_dim=50):
+    def correct_int(self, img_stack:np.array, mode='integral', use_bright=True, rect_dim=50,
+                    cast_to_int=True):
         """OPT intensity correction over the stack of projections, preferable 
         corrected for dark, bright, and hot pixels
 
@@ -243,19 +250,19 @@ class Correct(object):
         # second idea, fit a correction plane into the four corners.
         if use_bright is True and self.bright is not None:
             # four corners of the bright
-            ref = ((self.bright[:50, :50]), 
-                   (self.bright[:50, -50:]),
-                   (self.bright[-50:, :50]),
-                   (self.bright[-50:, -50:]),
+            ref = ((self.bright[:rect_dim, :rect_dim]), 
+                   (self.bright[:rect_dim, -rect_dim:]),
+                   (self.bright[-rect_dim:, :rect_dim]),
+                   (self.bright[-rect_dim:, -rect_dim:]),
                    )
         else:
             print('Using avg of the corners in the img stack as ref')
             # assuming the stacks 3rd dimension is the right one.
             # mean over steps in the aquisition
-            ref = ((np.mean(img_stack[:, :50, :50], axis=0)), 
-                   (np.mean(img_stack[:, :50, -50:], axis=0)),
-                   (np.mean(img_stack[:, -50:, :50], axis=0)),
-                   (np.mean(img_stack[:, -50:, -50:], axis=0)),
+            ref = ((np.mean(img_stack[:, :rect_dim, :rect_dim], axis=0)), 
+                   (np.mean(img_stack[:, :rect_dim, -rect_dim:], axis=0)),
+                   (np.mean(img_stack[:, -rect_dim:, :rect_dim], axis=0)),
+                   (np.mean(img_stack[:, -rect_dim:, -rect_dim:], axis=0)),
                    )
             
         print('shape ref:', [k.shape for k in ref])
@@ -279,15 +286,15 @@ class Correct(object):
             # two means are not a clean solution
             # as long as the rectangles ar the same, it is equivalent
             if mode=='integral':
-                img_int = np.mean((np.mean(img[:50, :50]),
-                                np.mean(img[:50, -50:]),
-                                np.mean(img[-50:, :50]),
-                                np.mean(img[-50:, -50:]),
+                img_int = np.mean((np.mean(img[:rect_dim, :rect_dim]),
+                                np.mean(img[:rect_dim, -rect_dim:]),
+                                np.mean(img[-rect_dim:, :rect_dim]),
+                                np.mean(img[-rect_dim:, -rect_dim:]),
                 ))
             elif mode=='integral_bottom':
                 img_int = np.mean((
-                                np.mean(img[-50:, :50]),
-                                np.mean(img[-50:, -50:]),
+                                np.mean(img[-rect_dim:, :rect_dim]),
+                                np.mean(img[-rect_dim:, -rect_dim:]),
                 ))
             stack_int.append(img_int)
             corr_stack[i] = (img / img_int) * self.ref
@@ -300,7 +307,9 @@ class Correct(object):
         is_positive(corr_stack)
 
         # cast it on correct dtype
-        corr_stack = img_to_int_type(corr_stack, dtype=corr_stack.dtype)
+        if cast_to_int:
+            corr_stack = img_to_int_type(corr_stack, dtype=corr_stack.dtype)
+        
         return corr_stack
 
 
